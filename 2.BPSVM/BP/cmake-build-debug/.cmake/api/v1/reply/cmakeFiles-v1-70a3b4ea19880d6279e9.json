@@ -154,8 +154,8 @@
 	"kind" : "cmakeFiles",
 	"paths" : 
 	{
-		"build" : "E:/GitHub/AI_VI/2.BPSVM/BP1/cmake-build-debug",
-		"source" : "E:/GitHub/AI_VI/2.BPSVM/BP1"
+		"build" : "E:/GitHub/AI_VI/2.BPSVM/BP/cmake-build-debug",
+		"source" : "E:/GitHub/AI_VI/2.BPSVM/BP"
 	},
 	"version" : 
 	{

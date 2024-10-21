@@ -1,0 +1,3 @@
+"D:\software\JetBrains\CLion 2024.2.2\bin\cmake\win\x64\bin\cmake.exe" -E rm -f CMakeFiles\BP.dir/objects.a
+D:\software\JETBRA~1\CLION2~1.2\bin\mingw\bin\ar.exe qc CMakeFiles\BP.dir/objects.a @CMakeFiles\BP.dir\objects1.rsp
+D:\software\JETBRA~1\CLION2~1.2\bin\mingw\bin\G__~1.EXE -g -Wl,--whole-archive CMakeFiles\BP.dir/objects.a -Wl,--no-whole-archive -o BP.exe -Wl,--out-implib,libBP.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\BP.dir\linkLibs.rsp
