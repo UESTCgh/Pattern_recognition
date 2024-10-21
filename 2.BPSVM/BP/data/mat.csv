@@ -20,3 +20,5 @@ Accuracy,Sensitivity,Specificity,AUC,TP,FP,TN,FN
 0.946136,0.956938,0.93578,0.946359,200,14,204,9
 Accuracy,Sensitivity,Specificity,AUC,TP,FP,TN,FN
 0.95082,0.953917,0.947619,0.950768,207,11,199,10
+Accuracy,Sensitivity,Specificity,AUC,TP,FP,TN,FN
+0.946136,0.965517,0.928571,0.947044,196,16,208,7

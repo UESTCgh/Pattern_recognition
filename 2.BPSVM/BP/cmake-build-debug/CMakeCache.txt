@@ -15,15 +15,6 @@
 ########################
 
 //Value Computed by CMake
-BP1_BINARY_DIR:STATIC=E:/GitHub/AI_VI/2.BPSVM/BP/cmake-build-debug
-
-//Value Computed by CMake
-BP1_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-BP1_SOURCE_DIR:STATIC=E:/GitHub/AI_VI/2.BPSVM/BP
-
-//Value Computed by CMake
 BP_BINARY_DIR:STATIC=E:/GitHub/AI_VI/2.BPSVM/BP/cmake-build-debug
 
 //Value Computed by CMake
@@ -128,7 +119,7 @@ CMAKE_FIND_PACKAGE_REDIRECTS_DIR:STATIC=E:/GitHub/AI_VI/2.BPSVM/BP/cmake-build-d
 CMAKE_GNUtoMS:BOOL=OFF
 
 //Install path prefix, prepended onto install directories.
-CMAKE_INSTALL_PREFIX:PATH=C:/Program Files (x86)/BP1
+CMAKE_INSTALL_PREFIX:PATH=C:/Program Files (x86)/BP
 
 //Path to a program.
 CMAKE_LINKER:FILEPATH=D:/software/JetBrains/CLion 2024.2.2/bin/mingw/bin/ld.exe
