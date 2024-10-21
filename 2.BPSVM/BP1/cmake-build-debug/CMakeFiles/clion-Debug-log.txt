@@ -1,0 +1,17 @@
+"D:\software\JetBrains\CLion 2024.2.2\bin\cmake\win\x64\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug "-DCMAKE_MAKE_PROGRAM=D:/software/JetBrains/CLion 2024.2.2/bin/ninja/win/x64/ninja.exe" -G Ninja -S E:\GitHub\AI_VI\2.BPSVM\BP1 -B E:\GitHub\AI_VI\2.BPSVM\BP1\cmake-build-debug
+-- Configuring done (0.2s)
+CMake Error at CMakeLists.txt:6 (add_executable):
+  Cannot find source file:
+
+    BpNet
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .cu .mpp .m .M .mm .ixx .cppm
+  .ccm .cxxm .c++m .h .hh .h++ .hm .hpp .hxx .in .txx .f .F .for .f77 .f90
+  .f95 .f03 .hip .ispc
+
+
+CMake Error at CMakeLists.txt:6 (add_executable):
+  No SOURCES given to target: BP1
+
+
+CMake Generate step failed.  Build files cannot be regenerated correctly.
