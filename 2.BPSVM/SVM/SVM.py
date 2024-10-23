@@ -193,7 +193,7 @@ def train_and_evaluate_svm_with_cv(filtered_data_file):
             plt.close()  # 关闭图表，防止显示
 
             # 可视化ROC曲线并保存
-            fpr, tpr, _ = roc_curve(y, y_pred_proba)
+            fpr, tpr, thresholds = roc_curve(y, y_pred_proba)  # 获取假阳性率、真阳性率和阈值数据
             plt.figure(figsize=(8, 6))
             plt.plot(fpr, tpr, color='blue', lw=2, label=f'AUC = {auc_score:.4f}')
             plt.plot([0, 1], [0, 1], color='gray', lw=2, linestyle='--')
@@ -206,6 +206,16 @@ def train_and_evaluate_svm_with_cv(filtered_data_file):
             roc_curve_path = os.path.join(kernel_result_dir, "roc_curve.png")
             plt.savefig(roc_curve_path)
             plt.close()  # 关闭图表，防止显示
+
+            # 保存ROC曲线数据到CSV文件
+            roc_data_path = os.path.join(kernel_result_dir, f"{kernel}_roc_curve_data.csv")
+            roc_data = pd.DataFrame({
+                'FPR': fpr,  # 假阳性率
+                'TPR': tpr,  # 真阳性率
+                'Thresholds': thresholds  # 阈值
+            })
+            roc_data.to_csv(roc_data_path, index=False)
+            print(f"ROC 曲线数据保存到: {roc_data_path}")
 
             # 可视化灵敏度、特异度和准确率并保存
             metrics = {'灵敏度 (SE)': sensitivity, '特异度 (SP)': specificity, '准确率 (ACC)': accuracy}
@@ -386,5 +396,5 @@ if __name__ == "__main__":
 
     # 4. 特征组合投影
     print(f"*******************特征组合投影*******************")
-    feature_combination_projection(filtered_data_file)
+    #feature_combination_projection(filtered_data_file)
 

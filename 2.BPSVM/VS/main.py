@@ -190,4 +190,4 @@ visualize_model(data_poly, "SVM_poly")
 visualize_model_comparison([data_bp, data_linear, data_rbf, data_poly], ["BP", "SVM_linear", "SVM_rbf", "SVM_poly"])
 
 # # 调用模型保存可视化函数
-visualize_model_comparison1([data_bp, data_linear, data_rbf, data_poly], ["BP", "SVM_linear", "SVM_rbf", "SVM_poly"])
+# visualize_model_comparison1([data_bp, data_linear, data_rbf, data_poly], ["BP", "SVM_linear", "SVM_rbf", "SVM_poly"])

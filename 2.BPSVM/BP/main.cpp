@@ -232,8 +232,11 @@ bool loadData(const std::string& filePath, std::vector<std::vector<double>>& X, 
 }
 
 /****************************训练********************************/
-// 训练 BP 神经网络的函数
-void trainBPNeuralNetwork(BPNeuralNetwork& bpnn, const std::vector<std::vector<double>>& X, const std::vector<std::vector<double>>& y, int epochs, const std::string& lossFilePath, std::vector<double>& loss_values) {
+// 训练 BP 神经网络的函数，并保存 ROC 和 AUC 数据
+void trainBPNeuralNetwork(BPNeuralNetwork& bpnn, const std::vector<std::vector<double>>& X, const std::vector<std::vector<double>>& y,
+                          int epochs, const std::string& lossFilePath, std::vector<double>& loss_values,
+                          const std::string& rocFilePath, const std::string& aucFilePath) {
+    // 打开文件保存损失
     std::ofstream lossFile(lossFilePath);
     if (!lossFile.is_open()) {
         std::cerr << "无法创建损失值文件" << std::endl;
@@ -256,7 +259,7 @@ void trainBPNeuralNetwork(BPNeuralNetwork& bpnn, const std::vector<std::vector<d
             // 设置类别权重
             double class_weight = (y[i][0] == 1) ? 0.5 : 0.5;
             // 反向传播
-            bpnn.backward(y[i],class_weight);
+            bpnn.backward(y[i], class_weight);
         }
         total_loss /= X.size();
         loss_values.push_back(total_loss);
@@ -264,21 +267,107 @@ void trainBPNeuralNetwork(BPNeuralNetwork& bpnn, const std::vector<std::vector<d
             std::cout << "第 " << epoch << " 轮, 损失: " << total_loss << std::endl;
         }
         lossFile << epoch << "," << total_loss << std::endl;
-
-//        if (total_loss < best_loss) {
-//            best_loss = total_loss;
-//            no_improve_epochs = 0;
-//        } else {
-//            no_improve_epochs++;
-//        }
-//
-//        if (no_improve_epochs >= patience) {
-//            std::cout << "早停于第 " << epoch << " 轮" << std::endl;
-//            break;
-//        }
     }
     lossFile.close();
+
+    // 保存 ROC 数据
+    std::ofstream rocFile(rocFilePath);
+    if (!rocFile.is_open()) {
+        std::cerr << "无法创建 ROC 数据文件" << std::endl;
+        return;
+    }
+    rocFile << "Threshold,TPR,FPR\n";
+
+    // 使用更密集的阈值评估模型表现
+    for (double threshold = 0.0; threshold <= 1.0; threshold += 0.01) { // 更小的步长，更密集的数据
+        int tp = 0, tn = 0, fp = 0, fn = 0;
+
+        for (size_t i = 0; i < X.size(); ++i) {
+            std::vector<double> prediction = bpnn.forward(X[i]);
+            int predicted_label = (prediction[0] >= threshold) ? 1 : 0;
+            int actual_label = static_cast<int>(y[i][0]);
+
+            if (predicted_label == 1 && actual_label == 1) {
+                tp++;
+            } else if (predicted_label == 0 && actual_label == 0) {
+                tn++;
+            } else if (predicted_label == 1 && actual_label == 0) {
+                fp++;
+            } else if (predicted_label == 0 && actual_label == 1) {
+                fn++;
+            }
+        }
+
+        // 计算 TPR 和 FPR
+        double tpr = (tp + fn) ? static_cast<double>(tp) / (tp + fn) : 0.0; // Sensitivity (TPR)
+        double fpr = (fp + tn) ? static_cast<double>(fp) / (fp + tn) : 0.0; // FPR
+
+        // 保存到 ROC 文件
+        rocFile << threshold << "," << tpr << "," << fpr << "\n";
+    }
+    rocFile.close();
+
+    // 计算 AUC
+    double auc = 0.0;
+    std::ifstream rocData(rocFilePath);
+    if (!rocData.is_open()) {
+        std::cerr << "无法读取 ROC 数据文件以计算 AUC" << std::endl;
+        return;
+    }
+
+    std::vector<std::pair<double, double>> roc_points;
+    std::string line;
+    std::getline(rocData, line); // 跳过标题行
+
+    while (std::getline(rocData, line)) {
+        std::stringstream ss(line);
+        std::string value;
+        double tpr, fpr;
+
+        std::getline(ss, value, ','); // 跳过阈值字段
+        std::getline(ss, value, ',');
+        tpr = std::stod(value);
+        std::getline(ss, value, ',');
+        fpr = std::stod(value);
+
+        roc_points.emplace_back(fpr, tpr);
+    }
+    rocData.close();
+
+    // 计算 AUC 值 (使用梯形法则)
+    for (size_t i = 1; i < roc_points.size(); ++i) {
+        double x_diff = roc_points[i].first - roc_points[i - 1].first;
+        double y_avg = (roc_points[i].second + roc_points[i - 1].second) / 2.0;
+        auc += x_diff * y_avg;
+    }
+
+    // 保存 AUC 到文件
+    std::ofstream aucFile(aucFilePath);
+    if (!aucFile.is_open()) {
+        std::cerr << "无法创建 AUC 文件" << std::endl;
+        return;
+    }
+    aucFile << "AUC\n";
+    aucFile << auc << "\n";
+    aucFile.close();
+
+    // 保存 AUC 曲线数据
+    std::ofstream aucCurveFile(aucFilePath);
+    if (!aucCurveFile.is_open()) {
+        std::cerr << "无法创建 AUC 曲线文件" << std::endl;
+        return;
+    }
+    aucCurveFile << "Threshold,AUC\n";
+    for (double threshold = 0.0; threshold <= 1.0; threshold += 0.01) {
+        aucCurveFile << threshold << "," << auc << "\n";
+    }
+    aucCurveFile.close();
+
+    std::cout << "训练完成。AUC: " << auc << std::endl;
+
 }
+
+
 
 void printConfusionMatrix(int tp, int tn, int fp, int fn) {
     std::cout << "混淆矩阵：" << std::endl;
@@ -405,6 +494,8 @@ int main() {
     std::string testFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/test.csv";//测试集路径
 
     std::string lossFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/loss_values.csv";//保存的损失值
+    std::string ROCFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/roc_values.csv";//保存的损失值
+    std::string AUCFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/auc_values.csv";//保存的损失值
 
     std::string misclassifiedFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/result/misclassified_samples.csv";//模型的错分样本
 
@@ -413,7 +504,7 @@ int main() {
 
 
     // 循环次数
-    int n = 100;  // 定义需要执行多少次整个流程
+    int n = 1;  // 定义需要执行多少次整个流程
 
     for (int iteration = 1; iteration <= n; ++iteration) {
         std::cout << "================== 第 " << iteration << " 次循环开始 ==================" << std::endl;
@@ -464,7 +555,7 @@ int main() {
         //4.训练 BP 神经网络，并记录损失值到文件中,保存模型参数
         std::vector<double> loss_values;
         std::cout << "******************开始训练bp神经网络****************** " << std::endl;
-        trainBPNeuralNetwork(bpnn, X, Y, epochs, lossFilePath, loss_values);
+        trainBPNeuralNetwork(bpnn, X, Y, epochs, lossFilePath, loss_values,ROCFilePath,AUCFilePath);
         // 保存模型参数
         bpnn.saveModel(modelFilePath);
 

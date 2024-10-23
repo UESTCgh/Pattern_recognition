@@ -15,6 +15,10 @@ loss_data = pd.read_csv(loss_file_path)
 metrics_file_path = 'mat.csv'
 metrics = pd.read_csv(metrics_file_path)
 
+# 加载ROC数据
+roc_file_path = 'roc_values.csv'
+roc_data = pd.read_csv(roc_file_path)
+
 # 清理性能指标数据，去掉空值和非数值行
 metrics = metrics.dropna()  # 删除包含 NaN 的行
 metrics = metrics.apply(pd.to_numeric, errors='coerce')  # 将所有数据转换为数值，无法转换的变为 NaN
@@ -105,6 +109,35 @@ def plot_metrics_comparison(metrics, results_dir):
     # 显示图像
     plt.close()
 
+# 绘制 ROC 曲线
+def plot_roc_curve(roc_data, results_dir):
+    plt.figure(figsize=(10, 6))
+
+    # 绘制 ROC 曲线
+    plt.plot(roc_data['FPR'], roc_data['TPR'], marker='o', linestyle='-', color='b', label='ROC Curve')
+    
+    # 绘制对角线（随机分类器的表现）
+    plt.plot([0, 1], [0, 1], linestyle='--', color='r', label='Random Classifier')
+
+    # 设置标题和坐标轴标签
+    plt.title('Receiver Operating Characteristic (ROC) Curve', fontsize=16)
+    plt.xlabel('False Positive Rate (FPR)', fontsize=14)
+    plt.ylabel('True Positive Rate (TPR)', fontsize=14)
+
+    # 添加图例
+    plt.legend()
+
+    # 显示网格线
+    plt.grid(True)
+
+    # 调整布局并保存图像
+    plt.tight_layout()
+    plot_path = os.path.join(results_dir, 'roc_curve.png')
+    plt.savefig(plot_path, bbox_inches='tight')
+
+    # 关闭图像
+    plt.close()
+
 # 主函数
 def main():
     # 打印列名以检查格式是否正确
@@ -115,10 +148,13 @@ def main():
     plot_loss_curve(loss_data, results_dir)
 
     # 绘制混淆矩阵
-    plot_confusion_matrix(metrics, results_dir)
+    #plot_confusion_matrix(metrics, results_dir)
 
     # 绘制四个性能指标的对比图
     plot_metrics_comparison(metrics, results_dir)
+
+    # 绘制 ROC 曲线
+    plot_roc_curve(roc_data, results_dir)
 
 if __name__ == "__main__":
     main()
