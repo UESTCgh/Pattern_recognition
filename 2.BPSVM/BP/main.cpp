@@ -335,7 +335,7 @@ void crossValidation(const std::vector<std::vector<double>>& X, const std::vecto
         std::cerr << "无法打开性能指标文件: " << metricsFilePath << std::endl;
         return;
     }
-    metricsFile << "Accuracy,Sensitivity,Specificity,AUC,TP,FP,TN,FN" << std::endl;
+   // metricsFile << "Accuracy,Sensitivity,Specificity,AUC,TP,FP,TN,FN" << std::endl;
 
 
     // 评估模型性能
@@ -411,62 +411,71 @@ int main() {
     std::string modelFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/result/models.txt";//模型参数
     std::string matFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/mat.csv";//评估结果的输出矩阵
 
-    /****************************BP神经网络的参数配置********************************/
-    int input_size = 4;       // 输入层节点数为 4
-    int hidden_size = 4;      // 隐藏层节点数为 4
-    int output_size = 1;      // 输出层节点数为 1 (性别分类：0 或 1)
-    double learning_rate = 0.001;//学习率
-    int epochs = 2000;//训练轮次
 
-    //1.调用函数预处理文件
-    std::cout << "*******************数据集预处理****************** " << std::endl;
-    if (!processFile(inputFilePath, outputFilePath, invalidFilePath)) {
-        std::cerr << "文件处理失败。" << std::endl;
-        return 1;
+    // 循环次数
+    int n = 100;  // 定义需要执行多少次整个流程
+
+    for (int iteration = 1; iteration <= n; ++iteration) {
+        std::cout << "================== 第 " << iteration << " 次循环开始 ==================" << std::endl;
+
+        /****************************BP神经网络的参数配置********************************/
+        int input_size = 4;       // 输入层节点数为 4
+        int hidden_size = 4;      // 隐藏层节点数为 4
+        int output_size = 1;      // 输出层节点数为 1 (性别分类：0 或 1)
+        double learning_rate = 0.001;//学习率
+        int epochs = 2000;//训练轮次
+
+        //1.调用函数预处理文件
+        std::cout << "*******************数据集预处理****************** " << std::endl;
+        if (!processFile(inputFilePath, outputFilePath, invalidFilePath)) {
+            std::cerr << "文件处理失败。" << std::endl;
+            return 1;
+        }
+        else{
+            std::cout << "数据集预处理成功！" << std::endl;
+        }
+
+        //2.划分数据集
+        // 将输入文件随机划分为训练集和测试集，比例为7:3
+        splitCSVFile(outputFilePath, trainFilePath, testFilePath);
+        std::cout << "按照7:3比例随机划分为训练集和测试集保存到文件中。" << std::endl;
+
+        //2.加载数据集
+        // 构建训练数据集，读取 train.csv 文件
+        std::vector<std::vector<double>> X;
+        std::vector<std::vector<double>> Y;
+        if (!loadData(trainFilePath, X, Y)) {
+            return 1;
+        }
+        //printData(X,Y);
+        // 构造测试数据集，读取 test.csv 文件
+        std::vector<std::vector<double>> X_test;
+        std::vector<std::vector<double>> Y_test;
+        if (!loadData(testFilePath, X_test, Y_test)) {
+            return 1;
+        }
+        std::cout << "数据集加载成功！" << std::endl;
+        //printData(X_test,Y_test);
+
+        //3.初始化 BP 神经网络
+        BPNeuralNetwork bpnn(input_size, hidden_size, output_size, learning_rate);
+        std::cout << "BP神经网络初始化完成..." << std::endl;
+
+        //4.训练 BP 神经网络，并记录损失值到文件中,保存模型参数
+        std::vector<double> loss_values;
+        std::cout << "******************开始训练bp神经网络****************** " << std::endl;
+        trainBPNeuralNetwork(bpnn, X, Y, epochs, lossFilePath, loss_values);
+        // 保存模型参数
+        bpnn.saveModel(modelFilePath);
+
+        //5.根据测试集计算模型准确率
+        std::cout << "*****************模型性能交叉验证评估******************" << std::endl;
+        evaluateBPNeuralNetwork(bpnn, X_test, Y_test,misclassifiedFilePath);
+
+        //6 使用交叉验证评估模型
+        crossValidation(X_test, Y_test, bpnn,matFilePath);
+        std::cout << "================== 第 " << iteration << " 次循环结束 ==================" << std::endl << std::endl;
     }
-    else{
-        std::cout << "数据集预处理成功！" << std::endl;
-    }
-
-    //2.划分数据集
-    // 将输入文件随机划分为训练集和测试集，比例为7:3
-    splitCSVFile(outputFilePath, trainFilePath, testFilePath);
-    std::cout << "按照7:3比例随机划分为训练集和测试集保存到文件中。" << std::endl;
-
-    //2.加载数据集
-    // 构建训练数据集，读取 train.csv 文件
-    std::vector<std::vector<double>> X;
-    std::vector<std::vector<double>> Y;
-    if (!loadData(trainFilePath, X, Y)) {
-        return 1;
-    }
-    //printData(X,Y);
-    // 构造测试数据集，读取 test.csv 文件
-    std::vector<std::vector<double>> X_test;
-    std::vector<std::vector<double>> Y_test;
-    if (!loadData(testFilePath, X_test, Y_test)) {
-        return 1;
-    }
-    std::cout << "数据集加载成功！" << std::endl;
-    //printData(X_test,Y_test);
-
-    //3.初始化 BP 神经网络
-    BPNeuralNetwork bpnn(input_size, hidden_size, output_size, learning_rate);
-    std::cout << "BP神经网络初始化完成..." << std::endl;
-
-    //4.训练 BP 神经网络，并记录损失值到文件中,保存模型参数
-    std::vector<double> loss_values;
-    std::cout << "******************开始训练bp神经网络****************** " << std::endl;
-    trainBPNeuralNetwork(bpnn, X, Y, epochs, lossFilePath, loss_values);
-    // 保存模型参数
-    bpnn.saveModel(modelFilePath);
-
-    //5.根据测试集计算模型准确率
-    std::cout << "*****************模型性能交叉验证评估******************" << std::endl;
-    evaluateBPNeuralNetwork(bpnn, X_test, Y_test,misclassifiedFilePath);
-
-    //6 使用交叉验证评估模型
-    crossValidation(X_test, Y_test, bpnn,matFilePath);
 
     return 0;
 }

@@ -33,7 +33,7 @@ def plot_loss_curve(loss_data, results_dir):
     # 保存损失图像
     plot_path = os.path.join(results_dir, 'training_loss_plot.png')
     plt.savefig(plot_path, bbox_inches='tight')
-    plt.show()
+    plt.close()
 
 # 绘制混淆矩阵
 def plot_confusion_matrix(metrics, results_dir):
@@ -62,7 +62,7 @@ def plot_confusion_matrix(metrics, results_dir):
             # 保存混淆矩阵图像
             plot_path = os.path.join(results_dir, f'confusion_matrix_fold_{fold_num}.png')
             plt.savefig(plot_path, bbox_inches='tight')
-            plt.show()
+            plt.close()
             fold_num += 1
         except ValueError as e:
             print(f"Skipping due to invalid data. Error: {e}")
@@ -103,7 +103,7 @@ def plot_metrics_comparison(metrics, results_dir):
     plt.savefig(plot_path, bbox_inches='tight')
 
     # 显示图像
-    plt.show()
+    plt.close()
 
 # 主函数
 def main():
