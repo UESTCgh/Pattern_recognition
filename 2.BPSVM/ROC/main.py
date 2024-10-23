@@ -38,7 +38,7 @@ def plot_and_save_all_roc():
     # 设置标签和标题
     plt.xlabel('假阳性率 (FPR)')
     plt.ylabel('真正率 (TPR)')
-    plt.title('不同核函数的ROC曲线')
+    plt.title('不同模型的ROC曲线')
 
     # 显示图例
     plt.legend()
@@ -87,4 +87,4 @@ plot_and_save_all_roc()
 plot_and_save_roc(os.path.join(data_dir, 'linear_roc_curve_data.csv'), '线性核', os.path.join(result_dir, 'linear_roc_curve.png'))
 plot_and_save_roc(os.path.join(data_dir, 'poly_roc_curve_data.csv'), '多项式核', os.path.join(result_dir, 'poly_roc_curve.png'))
 plot_and_save_roc(os.path.join(data_dir, 'rbf_roc_curve_data.csv'), 'RBF核', os.path.join(result_dir, 'rbf_roc_curve.png'))
-plot_and_save_roc(os.path.join(data_dir, 'roc_values.csv'), 'BP', os.path.join(result_dir, 'additional_roc_curve.png'))
+plot_and_save_roc(os.path.join(data_dir, 'roc_values.csv'), 'BP', os.path.join(result_dir, 'bp_roc_curve.png'))
