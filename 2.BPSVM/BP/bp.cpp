@@ -208,3 +208,8 @@ void BPNeuralNetwork::loadModel(const std::string& filename) {
     ifs.close();
     std::cout << "模型参数已从 " << filename << " 加载" << std::endl;
 }
+
+// 新增的设置学习率的函数实现
+void BPNeuralNetwork::setLearningRate(double new_learning_rate) {
+    learning_rate = new_learning_rate;
+}

@@ -23,6 +23,9 @@ public:
     // 从文件加载模型参数
     void loadModel(const std::string& filename);
 
+    // 设置学习率（新添加的方法）
+    void setLearningRate(double new_learning_rate);
+
 private:
     // 权重和偏置
     std::vector<std::vector<double>> weights_input_hidden; // 输入层到隐藏层的权重

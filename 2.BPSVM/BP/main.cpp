@@ -244,12 +244,18 @@ void trainBPNeuralNetwork(BPNeuralNetwork& bpnn, const std::vector<std::vector<d
     }
     lossFile << "Epoch,Loss" << std::endl;
 
-    int patience = 20; // 设置耐心值（最大允许无进步轮数）
+    //参数
+    int patience = 15; // 设置耐心值（最大允许无进步轮数）
     double best_loss = std::numeric_limits<double>::max();
     int no_improve_epochs = 0;
+    double learning_rate = 0.001; // 初始化学习率
+    double lr_decay = 0.9;  // 学习率衰减系数
+    double min_learning_rate = 1e-5; // 最小学习率下限
+    double increase_factor = 1.05; // 学习率增加系数
 
     for (int epoch = 0; epoch < epochs; ++epoch) {
         double total_loss = 0.0;
+
         for (size_t i = 0; i < X.size(); ++i) {
             // 前向传播
             std::vector<double> prediction = bpnn.forward(X[i]);
@@ -258,15 +264,39 @@ void trainBPNeuralNetwork(BPNeuralNetwork& bpnn, const std::vector<std::vector<d
             total_loss += error * error;
             // 设置类别权重
             double class_weight = (y[i][0] == 1) ? 0.5 : 0.5;
-            // 反向传播
+            // 反向传播，并根据动态学习率调整
+            //bpnn.setLearningRate(learning_rate); // 动态设置学习率
             bpnn.backward(y[i], class_weight);
         }
+
         total_loss /= X.size();
         loss_values.push_back(total_loss);
         if (epoch % 100 == 0) {
             std::cout << "第 " << epoch << " 轮, 损失: " << total_loss << std::endl;
         }
         lossFile << epoch << "," << total_loss << std::endl;
+
+        // Early stopping 检查逻辑
+        if (total_loss < best_loss) {
+            best_loss = total_loss;  // 更新最佳损失
+            no_improve_epochs = 0;   // 重置无改进轮数
+            // 增加学习率以加速收敛
+            learning_rate = std::min(learning_rate * increase_factor, 1.0); // 限制学习率增长上限为 1.0
+        } else {
+            no_improve_epochs++;     // 增加无改进轮数
+        }
+
+        // 如果无改进轮数达到耐心值，降低学习率
+        if (no_improve_epochs >= patience) {
+            learning_rate *= lr_decay;  // 学习率衰减
+            if (learning_rate < min_learning_rate) {
+                learning_rate = min_learning_rate;  // 限制学习率不低于最小值
+                std::cout << "学习率已降至最小值，早停于第 " << epoch << " 轮" << std::endl;
+                break;
+            }
+            std::cout << "损失未改进，降低学习率至: " << learning_rate << std::endl;
+            no_improve_epochs = 0;  // 重置无改进轮数，继续训练
+        }
     }
     lossFile.close();
 
@@ -351,22 +381,8 @@ void trainBPNeuralNetwork(BPNeuralNetwork& bpnn, const std::vector<std::vector<d
     aucFile << auc << "\n";
     aucFile.close();
 
-    // 保存 AUC 曲线数据
-    std::ofstream aucCurveFile(aucFilePath);
-    if (!aucCurveFile.is_open()) {
-        std::cerr << "无法创建 AUC 曲线文件" << std::endl;
-        return;
-    }
-    aucCurveFile << "Threshold,AUC\n";
-    for (double threshold = 0.0; threshold <= 1.0; threshold += 0.01) {
-        aucCurveFile << threshold << "," << auc << "\n";
-    }
-    aucCurveFile.close();
-
     std::cout << "训练完成。AUC: " << auc << std::endl;
-
 }
-
 
 
 void printConfusionMatrix(int tp, int tn, int fp, int fn) {
@@ -502,7 +518,6 @@ int main() {
     std::string modelFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/result/models.txt";//模型参数
     std::string matFilePath = "E:/GitHub/AI_VI/2.BPSVM/BP/data/mat.csv";//评估结果的输出矩阵
 
-
     // 循环次数
     int n = 1;  // 定义需要执行多少次整个流程
 
@@ -513,7 +528,7 @@ int main() {
         int input_size = 4;       // 输入层节点数为 4
         int hidden_size = 4;      // 隐藏层节点数为 4
         int output_size = 1;      // 输出层节点数为 1 (性别分类：0 或 1)
-        double learning_rate = 0.001;//学习率
+        double learning_rate = 0.01;//学习率
         int epochs = 2000;//训练轮次
 
         //1.调用函数预处理文件
