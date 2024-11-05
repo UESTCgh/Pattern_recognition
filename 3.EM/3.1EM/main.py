@@ -62,7 +62,23 @@ def gmm_em_training_save_last(data, n_components=2, max_iter=100, tol=1e-4, init
 
     prev_means = None
 
-    # 训练模型
+    # 初始化动画
+    def update(frame):
+        ax.clear()
+        means, covariances = frames[frame]  # 获取当前帧的均值和方差
+        ax.hist(data, bins=30, density=True, alpha=0.5, label="Data Histogram")
+
+        for i, (mean, covariance) in enumerate(zip(means, covariances)):
+            ax.axvline(mean, color=f"C{i}", linestyle='--', label=f"Component {i + 1} Mean")
+            ax.text(mean, 0.1, f"Mean: {mean:.2f}\nStd: {np.sqrt(covariance):.2f}", color=f"C{i}", fontsize=9,
+                    ha='center')
+
+        ax.set_title(f"GMM Clustering - Iteration {frame + 1}")
+        ax.set_xlabel("Gray Level")
+        ax.set_ylabel("Density")
+        ax.legend()
+
+    # 训练模型并实时更新动画
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         for iteration in range(max_iter):
@@ -77,29 +93,18 @@ def gmm_em_training_save_last(data, n_components=2, max_iter=100, tol=1e-4, init
                 break
             prev_means = means
 
-            # 绘制当前迭代的直方图和均值、方差位置
-            ax.clear()
-            ax.hist(data, bins=30, density=True, alpha=0.5, label="Data Histogram")
-            for i, (mean, covariance) in enumerate(zip(means, covariances)):
-                ax.axvline(mean, color=f"C{i}", linestyle='--', label=f"Component {i + 1} Mean (Iter {iteration + 1})")
-                ax.text(mean, 0.1, f"Mean: {mean:.2f}\nStd: {np.sqrt(covariance):.2f}", color=f"C{i}", fontsize=9,
-                        ha='center')
-            ax.set_title(f"GMM Clustering - Iteration {iteration + 1}")
-            ax.set_xlabel("Gray Level")
-            ax.set_ylabel("Density")
-            ax.legend()
+            # 保存当前均值和方差
+            frames.append((means, covariances))
 
-            # 保存当前帧
-            frames.append(fig.canvas.copy_from_bbox(fig.bbox))
-            plt.pause(0.1)
+            # 更新图形并保存当前帧
+            update(iteration)
+            fig.canvas.draw()  # 更新图形
+            plt.pause(0.1)  # 暂停以更新图形
 
-    # 保存动画为GIF（使用PillowWriter代替imagemagick）
-    def animate(i):
-        fig.canvas.restore_region(frames[i])
-
-    ani = animation.FuncAnimation(fig, animate, frames=len(frames), repeat=False)
+    # 创建动画
+    ani = animation.FuncAnimation(fig, update, frames=len(frames), repeat=False)
     gif_filename = os.path.join(save_path, "gmm_training_process.gif")
-    ani.save(gif_filename, writer=PillowWriter(fps=1))
+    ani.save(gif_filename, writer=PillowWriter(fps=4))
     print(f"动画已保存: {gif_filename}")
 
     # 保存最后一次迭代的模型
@@ -242,6 +247,9 @@ def segment_masked_data(mask_file_path, bmp_file_path, model_path, n_segments):
 
     plt.title("Segmented Masked Image with Internal Labels")
     plt.axis('off')
+
+    segmented_image_lable_filename = os.path.join(RESULT_DIR, "segmented_image_lable.png")
+    plt.savefig(segmented_image_lable_filename, bbox_inches='tight', pad_inches=0.1)  # 保存图片
     plt.show()
 
 
