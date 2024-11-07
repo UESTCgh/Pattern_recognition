@@ -1,9 +1,9 @@
 # AI_VI
  模式识别
 
-```
 ## 项目结构
-text
+
+```
 E:/GitHub/AI_VI/
 │
 ├── 1.BayesianClassifier/        # 贝叶斯分类器

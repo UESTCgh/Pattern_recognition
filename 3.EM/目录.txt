@@ -1,0 +1,314 @@
+卷 项目 的文件夹 PATH 列表
+卷序列号为 4E05-71FA
+E:.
+│  1.txt，
+│  ReadMe.txt
+│  
+├─3.1EM
+│  │  309.bmp
+│  │  array_sample.mat
+│  │  main.py
+│  │  Mask.mat
+│  │  readme.md
+│  │  
+│  ├─.idea
+│  │  │  .gitignore
+│  │  │  3.1EM.iml
+│  │  │  misc.xml
+│  │  │  modules.xml
+│  │  │  vcs.xml
+│  │  │  workspace.xml
+│  │  │  
+│  │  └─inspectionProfiles
+│  │          profiles_settings.xml
+│  │          
+│  └─result
+│          all_gray_no_boundaries.jpg
+│          all_gray_with_boundaries.jpg
+│          all_rgb_no_boundaries.jpg
+│          all_rgb_with_boundaries.jpg
+│          gmm_final_model.pkl
+│          gmm_final_result.png
+│          gmm_rgb_final_model.pkl
+│          gmm_rgb_final_result.png
+│          gmm_rgb_training_process.gif
+│          gmm_training_process.gif
+│          masked_image.png
+│          only_gray_no_boundaries.jpg
+│          only_gray_with_boundaries.jpg
+│          only_rgb_no_boundaries.jpg
+│          only_rgb_with_boundaries.jpg
+│          
+├─3.2fishdis
+│  │  main.py
+│  │  readme.md
+│  │  
+│  ├─.idea
+│  │  │  .gitignore
+│  │  │  3.2fishdis.iml
+│  │  │  misc.xml
+│  │  │  modules.xml
+│  │  │  vcs.xml
+│  │  │  workspace.xml
+│  │  │  
+│  │  └─inspectionProfiles
+│  │          profiles_settings.xml
+│  │          
+│  ├─data
+│  │      311.bmp
+│  │      313.bmp
+│  │      315.bmp
+│  │      317.bmp
+│  │      gmm_final_model.pkl
+│  │      gmm_rgb_final_model.pkl
+│  │      
+│  ├─result
+│  │  │  311_grabcut.bmp
+│  │  │  313_grabcut.bmp
+│  │  │  315_grabcut.bmp
+│  │  │  317_grabcut.bmp
+│  │  │  
+│  │  ├─combined
+│  │  │      311_grabcut_combined_process.bmp
+│  │  │      311_grabcut_combined_process_horizontal.bmp
+│  │  │      311_grabcut_combined_steps.bmp
+│  │  │      313_grabcut_combined_process.bmp
+│  │  │      313_grabcut_combined_process_horizontal.bmp
+│  │  │      313_grabcut_combined_steps.bmp
+│  │  │      315_grabcut_combined_process.bmp
+│  │  │      315_grabcut_combined_process_horizontal.bmp
+│  │  │      315_grabcut_combined_steps.bmp
+│  │  │      317_grabcut_combined_process.bmp
+│  │  │      317_grabcut_combined_process_horizontal.bmp
+│  │  │      317_grabcut_combined_steps.bmp
+│  │  │      
+│  │  ├─gray
+│  │  │      311_clustered_gray_no_boundaries.jpg
+│  │  │      311_clustered_gray_with_boundaries.jpg
+│  │  │      311_grabcut_clustered_gray_no_boundaries.jpg
+│  │  │      311_grabcut_clustered_gray_with_boundaries.jpg
+│  │  │      313_clustered_gray_no_boundaries.jpg
+│  │  │      313_clustered_gray_with_boundaries.jpg
+│  │  │      313_grabcut_clustered_gray_no_boundaries.jpg
+│  │  │      313_grabcut_clustered_gray_with_boundaries.jpg
+│  │  │      315_clustered_gray_no_boundaries.jpg
+│  │  │      315_clustered_gray_with_boundaries.jpg
+│  │  │      315_grabcut_clustered_gray_no_boundaries.jpg
+│  │  │      315_grabcut_clustered_gray_with_boundaries.jpg
+│  │  │      317_clustered_gray_no_boundaries.jpg
+│  │  │      317_clustered_gray_with_boundaries.jpg
+│  │  │      317_grabcut_clustered_gray_no_boundaries.jpg
+│  │  │      317_grabcut_clustered_gray_with_boundaries.jpg
+│  │  │      
+│  │  └─rgb
+│  │          311_clustered_rgb_no_boundaries.jpg
+│  │          311_clustered_rgb_with_boundaries.jpg
+│  │          311_grabcut_clustered_rgb_no_boundaries.jpg
+│  │          311_grabcut_clustered_rgb_with_boundaries.jpg
+│  │          313_clustered_rgb_no_boundaries.jpg
+│  │          313_clustered_rgb_with_boundaries.jpg
+│  │          313_grabcut_clustered_rgb_no_boundaries.jpg
+│  │          313_grabcut_clustered_rgb_with_boundaries.jpg
+│  │          315_clustered_rgb_no_boundaries.jpg
+│  │          315_clustered_rgb_with_boundaries.jpg
+│  │          315_grabcut_clustered_rgb_no_boundaries.jpg
+│  │          315_grabcut_clustered_rgb_with_boundaries.jpg
+│  │          317_clustered_rgb_no_boundaries.jpg
+│  │          317_clustered_rgb_with_boundaries.jpg
+│  │          317_grabcut_clustered_rgb_no_boundaries.jpg
+│  │          317_grabcut_clustered_rgb_with_boundaries.jpg
+│  │          
+│  └─result1
+│      │  311_mask.jpg
+│      │  313_mask.jpg
+│      │  315_mask.jpg
+│      │  317_mask.jpg
+│      │  
+│      ├─combined
+│      │      311_mask.mat
+│      │      311_output.png
+│      │      313_mask.mat
+│      │      313_output.png
+│      │      315_mask.mat
+│      │      315_output.png
+│      │      317_mask.mat
+│      │      317_output.png
+│      │      
+│      ├─gray
+│      │      311_clustered_gray_no_boundaries.jpg
+│      │      311_clustered_gray_with_boundaries.jpg
+│      │      311_mask_gray_no_boundaries.jpg
+│      │      311_mask_gray_with_boundaries.jpg
+│      │      313_clustered_gray_no_boundaries.jpg
+│      │      313_clustered_gray_with_boundaries.jpg
+│      │      313_mask_gray_no_boundaries.jpg
+│      │      313_mask_gray_with_boundaries.jpg
+│      │      315_clustered_gray_no_boundaries.jpg
+│      │      315_clustered_gray_with_boundaries.jpg
+│      │      315_mask_gray_no_boundaries.jpg
+│      │      315_mask_gray_with_boundaries.jpg
+│      │      317_clustered_gray_no_boundaries.jpg
+│      │      317_clustered_gray_with_boundaries.jpg
+│      │      317_mask_gray_no_boundaries.jpg
+│      │      317_mask_gray_with_boundaries.jpg
+│      │      
+│      └─rgb
+│              311_clustered_rgb_no_boundaries.jpg
+│              311_clustered_rgb_with_boundaries.jpg
+│              311_mask_rgb_no_boundaries.jpg
+│              311_mask_rgb_with_boundaries.jpg
+│              313_clustered_rgb_no_boundaries.jpg
+│              313_clustered_rgb_with_boundaries.jpg
+│              313_mask_rgb_no_boundaries.jpg
+│              313_mask_rgb_with_boundaries.jpg
+│              315_clustered_rgb_no_boundaries.jpg
+│              315_clustered_rgb_with_boundaries.jpg
+│              315_mask_rgb_no_boundaries.jpg
+│              315_mask_rgb_with_boundaries.jpg
+│              317_clustered_rgb_no_boundaries.jpg
+│              317_clustered_rgb_with_boundaries.jpg
+│              317_mask_rgb_no_boundaries.jpg
+│              317_mask_rgb_with_boundaries.jpg
+│              
+├─实验结果汇总
+│  │  readme.md
+│  │  
+│  ├─任务1
+│  │  ├─gray
+│  │  │      all_gray_no_boundaries.jpg
+│  │  │      all_gray_with_boundaries.jpg
+│  │  │      only_gray_no_boundaries.jpg
+│  │  │      only_gray_with_boundaries.jpg
+│  │  │      
+│  │  ├─RGB
+│  │  │      all_rgb_no_boundaries.jpg
+│  │  │      all_rgb_with_boundaries.jpg
+│  │  │      only_rgb_no_boundaries.jpg
+│  │  │      only_rgb_with_boundaries.jpg
+│  │  │      
+│  │  └─模型相关
+│  │          gmm_final_model.pkl
+│  │          gmm_final_result.png
+│  │          gmm_rgb_final_model.pkl
+│  │          gmm_rgb_final_result.png
+│  │          gmm_rgb_training_process.gif
+│  │          gmm_training_process.gif
+│  │          
+│  └─任务2
+│      │  说明.md
+│      │  
+│      ├─GrabCut 算法
+│      │  │  311_grabcut.bmp
+│      │  │  313_grabcut.bmp
+│      │  │  315_grabcut.bmp
+│      │  │  317_grabcut.bmp
+│      │  │  
+│      │  ├─combined
+│      │  │      311_grabcut_combined_process.bmp
+│      │  │      311_grabcut_combined_process_horizontal.bmp
+│      │  │      311_grabcut_combined_steps.bmp
+│      │  │      313_grabcut_combined_process.bmp
+│      │  │      313_grabcut_combined_process_horizontal.bmp
+│      │  │      313_grabcut_combined_steps.bmp
+│      │  │      315_grabcut_combined_process.bmp
+│      │  │      315_grabcut_combined_process_horizontal.bmp
+│      │  │      315_grabcut_combined_steps.bmp
+│      │  │      317_grabcut_combined_process.bmp
+│      │  │      317_grabcut_combined_process_horizontal.bmp
+│      │  │      317_grabcut_combined_steps.bmp
+│      │  │      
+│      │  ├─gray
+│      │  │      311_clustered_gray_no_boundaries.jpg
+│      │  │      311_clustered_gray_with_boundaries.jpg
+│      │  │      311_grabcut_clustered_gray_no_boundaries.jpg
+│      │  │      311_grabcut_clustered_gray_with_boundaries.jpg
+│      │  │      313_clustered_gray_no_boundaries.jpg
+│      │  │      313_clustered_gray_with_boundaries.jpg
+│      │  │      313_grabcut_clustered_gray_no_boundaries.jpg
+│      │  │      313_grabcut_clustered_gray_with_boundaries.jpg
+│      │  │      315_clustered_gray_no_boundaries.jpg
+│      │  │      315_clustered_gray_with_boundaries.jpg
+│      │  │      315_grabcut_clustered_gray_no_boundaries.jpg
+│      │  │      315_grabcut_clustered_gray_with_boundaries.jpg
+│      │  │      317_clustered_gray_no_boundaries.jpg
+│      │  │      317_clustered_gray_with_boundaries.jpg
+│      │  │      317_grabcut_clustered_gray_no_boundaries.jpg
+│      │  │      317_grabcut_clustered_gray_with_boundaries.jpg
+│      │  │      
+│      │  └─rgb
+│      │          311_clustered_rgb_no_boundaries.jpg
+│      │          311_clustered_rgb_with_boundaries.jpg
+│      │          311_grabcut_clustered_rgb_no_boundaries.jpg
+│      │          311_grabcut_clustered_rgb_with_boundaries.jpg
+│      │          313_clustered_rgb_no_boundaries.jpg
+│      │          313_clustered_rgb_with_boundaries.jpg
+│      │          313_grabcut_clustered_rgb_no_boundaries.jpg
+│      │          313_grabcut_clustered_rgb_with_boundaries.jpg
+│      │          315_clustered_rgb_no_boundaries.jpg
+│      │          315_clustered_rgb_with_boundaries.jpg
+│      │          315_grabcut_clustered_rgb_no_boundaries.jpg
+│      │          315_grabcut_clustered_rgb_with_boundaries.jpg
+│      │          317_clustered_rgb_no_boundaries.jpg
+│      │          317_clustered_rgb_with_boundaries.jpg
+│      │          317_grabcut_clustered_rgb_no_boundaries.jpg
+│      │          317_grabcut_clustered_rgb_with_boundaries.jpg
+│      │          
+│      └─直接颜色过滤
+│          │  311_mask.jpg
+│          │  313_mask.jpg
+│          │  315_mask.jpg
+│          │  317_mask.jpg
+│          │  
+│          ├─combined
+│          │      311_mask.mat
+│          │      311_output.png
+│          │      313_mask.mat
+│          │      313_output.png
+│          │      315_mask.mat
+│          │      315_output.png
+│          │      317_mask.mat
+│          │      317_output.png
+│          │      
+│          ├─gray
+│          │      311_clustered_gray_no_boundaries.jpg
+│          │      311_clustered_gray_with_boundaries.jpg
+│          │      311_mask_gray_no_boundaries.jpg
+│          │      311_mask_gray_with_boundaries.jpg
+│          │      313_clustered_gray_no_boundaries.jpg
+│          │      313_clustered_gray_with_boundaries.jpg
+│          │      313_mask_gray_no_boundaries.jpg
+│          │      313_mask_gray_with_boundaries.jpg
+│          │      315_clustered_gray_no_boundaries.jpg
+│          │      315_clustered_gray_with_boundaries.jpg
+│          │      315_mask_gray_no_boundaries.jpg
+│          │      315_mask_gray_with_boundaries.jpg
+│          │      317_clustered_gray_no_boundaries.jpg
+│          │      317_clustered_gray_with_boundaries.jpg
+│          │      317_mask_gray_no_boundaries.jpg
+│          │      317_mask_gray_with_boundaries.jpg
+│          │      
+│          └─rgb
+│                  311_clustered_rgb_no_boundaries.jpg
+│                  311_clustered_rgb_with_boundaries.jpg
+│                  311_mask_rgb_no_boundaries.jpg
+│                  311_mask_rgb_with_boundaries.jpg
+│                  313_clustered_rgb_no_boundaries.jpg
+│                  313_clustered_rgb_with_boundaries.jpg
+│                  313_mask_rgb_no_boundaries.jpg
+│                  313_mask_rgb_with_boundaries.jpg
+│                  315_clustered_rgb_no_boundaries.jpg
+│                  315_clustered_rgb_with_boundaries.jpg
+│                  315_mask_rgb_no_boundaries.jpg
+│                  315_mask_rgb_with_boundaries.jpg
+│                  317_clustered_rgb_no_boundaries.jpg
+│                  317_clustered_rgb_with_boundaries.jpg
+│                  317_mask_rgb_no_boundaries.jpg
+│                  317_mask_rgb_with_boundaries.jpg
+│                  
+└─资料
+        309.bmp
+        array_sample.mat
+        Mask.mat
+        pattern_rec_ThirdT.zip
+        第三次大作业.pptx
+        
