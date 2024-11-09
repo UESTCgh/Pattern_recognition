@@ -383,9 +383,9 @@ if __name__ == "__main__":
 
     # 2. 训练聚类模型
     # 仅灰度
-    gmm_em_training_save_last(data=gray_data, n_components=4, max_iter=100, save_path=RESULT_DIR)
+    gmm_em_training_save_last(data=gray_data, n_components=5, max_iter=100, save_path=RESULT_DIR)
     # RGB数据
-    gmm_rgb_clustering(rgb_data, n_components=4, max_iter=100, tol=1e-4, init_params='random', save_path=RESULT_DIR)
+    gmm_rgb_clustering(rgb_data, n_components=5, max_iter=100, tol=1e-4, init_params='random', save_path=RESULT_DIR)
 
     # 3. 加载和显示掩码部分的图像
     mask_file_path = os.path.join(BASE_DIR, MASK_FILE_NAME)

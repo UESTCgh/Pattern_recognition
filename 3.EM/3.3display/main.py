@@ -22,6 +22,10 @@ import matplotlib.font_manager as fm
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用SimHei字体
 plt.rcParams['axes.unicode_minus'] = False    # 解决负号显示为方块的问题
 
+# 确保模型保存目录存在
+MODEL_SAVE_DIR = "trained_models"
+os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
+
 # 定义全局变量用于存储模型路径和图像路径
 model_path = ""
 current_image_path = ""
@@ -174,35 +178,133 @@ def load_image(image_path):
     except Exception as e:
         messagebox.showerror("错误", f"加载图像时出错: {str(e)}")
 
+# 直接颜色范围过滤的抠图算法
+def generate_nemo_mask(img):
+    rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    hsv_img = cv2.cvtColor(rgb_img, cv2.COLOR_RGB2HSV)
 
-# 处理图像进行抠图
+    light_orange = (5, 100, 120)
+    dark_orange = (20, 255, 255)
+    light_white = (35, 0, 160)
+    dark_light = (255, 160, 255)
+
+    mask1 = cv2.inRange(hsv_img, light_orange, dark_orange)
+    mask2 = cv2.inRange(hsv_img, light_white, dark_light)
+    mask = np.array((mask1 + mask2) > 0, dtype=mask1.dtype)
+
+    kernel = np.ones((9, 9), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+    ROI = np.zeros(mask.shape, np.uint8)
+    ROI[0:166, 50:200] = 1
+    mask = mask * ROI
+
+    return mask
+
+
+def extract_fish_with_color_filter(image_path, save_path):
+    img = cv2.imread(image_path)
+    mask = generate_nemo_mask(img)
+    segmented_img = cv2.bitwise_and(img, img, mask=mask)
+
+    # 保存处理结果
+    cv2.imwrite(save_path, segmented_img)
+
 def confirm_grabcut():
     try:
-        if current_image_path:
-            save_path = os.path.join("result", os.path.basename(current_image_path).replace(".bmp", "_grabcut.png"))
-            os.makedirs("result", exist_ok=True)
+        if not current_image_path:
+            messagebox.showerror("错误", "请先加载图片再执行抠图操作！")
+            return
+
+        # 获取算法选择
+        if isinstance(algorithm_choice, tk.StringVar):
+            algorithm = algorithm_choice.get()  # 如果是 tk.StringVar，使用 .get() 获取值
+        else:
+            algorithm = algorithm_choice  # 如果是字符串，则直接使用
+
+        if algorithm not in ["GrabCut", "Color Filter"]:
+            messagebox.showerror("错误", "无效的抠图算法选择！")
+            return
+
+        # 设置保存路径，根据算法选择不同的子文件夹
+        result_dir = "result"
+        if algorithm == "GrabCut":
+            save_dir = os.path.join(result_dir, "GrabCut")
+        elif algorithm == "Color Filter":
+            save_dir = os.path.join(result_dir, "ColorFilter")
+
+        # 创建保存目录（如果目录不存在则创建）
+        os.makedirs(save_dir, exist_ok=True)
+
+        # 设置保存文件路径
+        save_path = os.path.join(save_dir, os.path.basename(current_image_path).replace(".bmp", "_processed.png"))
+
+        # 根据选择执行不同的抠图方法
+        if algorithm == "GrabCut":
             extract_fish_with_grabcut(current_image_path, save_path)
-            load_image(save_path)
-            global current_processed_image_path
-            current_processed_image_path = save_path  # 保存抠图后的路径，用于分割
+        elif algorithm == "Color Filter":
+            extract_fish_with_color_filter(current_image_path, save_path)
+
+        # 更新显示处理后的图像
+        load_image(save_path)
+        global current_processed_image_path
+        current_processed_image_path = save_path
+
     except Exception as e:
         messagebox.showerror("错误", f"抠图处理时出错: {str(e)}")
 
 
+
 # 处理图像进行分割
 def confirm_segmentation():
+    if not model_path:
+        messagebox.showwarning("模型未加载", "请先加载分割模型，然后再进行分割操作。")
+        return
+
     try:
         if current_processed_image_path and model_path:
-            output_path = current_processed_image_path.replace("_grabcut", "_segmented")
-            apply_gmm_to_image(model_path, current_processed_image_path, output_path, mode=selected_mode,
-                               normalize=True)
+            # 获取算法选择并确定保存目录
+            if isinstance(algorithm_choice, tk.StringVar):
+                algorithm = algorithm_choice.get()
+            else:
+                algorithm = algorithm_choice
+
+            if algorithm == "GrabCut":
+                save_dir = os.path.join("result", "GrabCut")
+            elif algorithm == "Color Filter":
+                save_dir = os.path.join("result", "ColorFilter")
+            else:
+                messagebox.showerror("错误", "无效的抠图算法选择！")
+                return
+
+            # 确保保存目录存在
+            os.makedirs(save_dir, exist_ok=True)
+
+            # 根据选择的模式设置保存路径，添加模式后缀
+            mode_suffix = "_rgb" if selected_mode == "rgb" else "_gray"
+            output_filename = os.path.basename(current_processed_image_path).replace("_processed", f"_segmented{mode_suffix}")
+            output_path = os.path.join(save_dir, output_filename)
+
+            # 执行分割操作
+            apply_gmm_to_image(model_path, current_processed_image_path, output_path, mode=selected_mode, normalize=True)
+
+            # 确定无边界的输出路径，并检查其保存是否成功
+            no_boundaries_output_path = output_path.replace(".png", f"_no_boundaries.png")
+
+            # 确保文件确实被保存到目标路径
+            if not os.path.exists(no_boundaries_output_path):
+                messagebox.showerror("保存错误", f"分割结果文件未能成功保存：{no_boundaries_output_path}")
+                return
+
             # 加载无边界的分割结果
-            segmented_image = Image.open(output_path.replace(".png", "_no_boundaries.png"))
+            segmented_image = Image.open(no_boundaries_output_path)
             display_result(segmented_image)
+
     except ValueError:
         messagebox.showerror("错误", "GMM 期望输入的特征数量与当前模式不匹配。请设置模式为正确的类型。")
     except Exception as e:
         messagebox.showerror("错误", f"分割处理时出错: {str(e)}")
+
 
 
 # 显示处理后的图像
@@ -230,9 +332,17 @@ def update_mode(event):
 # 从MAT文件加载数据
 def select_dataset():
     global dataset_path
+    # 如果已经加载了数据集路径，则不再需要重新加载
+    if dataset_path:
+        messagebox.showinfo("数据集已加载", f"数据集路径已存在：{dataset_path}")
+        return
+
+    # 选择数据集路径
     dataset_path = filedialog.askopenfilename(filetypes=[("MAT files", "*.mat")])
     if dataset_path:
         messagebox.showinfo("数据集加载", f"成功加载数据集：{dataset_path}")
+    else:
+        messagebox.showwarning("数据集加载失败", "未选择数据集路径，请重新选择。")
 
 
 def load_mat_data(data_type):
@@ -332,16 +442,29 @@ def visualize_gmm_training(data_type, parent_frame):
             messagebox.showinfo("训练完成", f"模型在迭代 {stop_iteration} 时收敛，提前停止训练。")
             if stop_iteration else None))
 
+        # 自动保存训练好的模型到指定的目录中
+        model_name = f"gmm_model_{data_type}_{n_components}_components.pkl"
+        model_save_path = os.path.join(MODEL_SAVE_DIR, model_name)
+        joblib.dump(gmm, model_save_path)
+        messagebox.showinfo("模型保存", f"模型已自动保存到：{model_save_path}")
+
     except Exception as e:
         messagebox.showerror("训练失败", f"在训练过程中遇到问题：{str(e)}")
 
 
+# 更新抠图算法选择
+def update_algorithm_choice(event):
+    global algorithm_choice
+    algorithm_choice = algorithm_var.get()
 
 # 创建 GUI
 root = tk.Tk()
 root.title("自动抠图和分割工具")
 root.geometry("900x700")
 root.configure(bg='#F0F0F0')
+
+# 在全局定义algorithm_choice变量
+algorithm_choice = tk.StringVar(value="GrabCut")  # 默认为GrabCut算法
 
 # 使用 Notebook 控件创建类似浏览器标签的界面
 notebook = ttk.Notebook(root)
@@ -370,15 +493,30 @@ confirm_grabcut_btn.grid(row=0, column=2, padx=5)
 confirm_segmentation_btn = ttk.Button(button_frame, text="确认分割", command=confirm_segmentation, style='TButton')
 confirm_segmentation_btn.grid(row=0, column=3, padx=5)
 
+# 使按钮分布更加均匀
+button_frame.grid_columnconfigure(0, weight=1)
+button_frame.grid_columnconfigure(1, weight=1)
+button_frame.grid_columnconfigure(2, weight=1)
+button_frame.grid_columnconfigure(3, weight=1)
+
 # 创建模式选择下拉菜单
 mode_var = tk.StringVar(value="gray")
 mode_label = ttk.Label(button_frame, text="选择模式:", font=('Arial', 12))
-mode_label.grid(row=0, column=4, padx=5)
+mode_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
-mode_menu = ttk.Combobox(button_frame, textvariable=mode_var, values=["gray", "rgb"], font=('Arial', 12),
-                         state="readonly")
-mode_menu.grid(row=0, column=5, padx=5)
+mode_menu = ttk.Combobox(button_frame, textvariable=mode_var, values=["gray", "rgb"], font=('Arial', 12), state="readonly")
+mode_menu.grid(row=1, column=1, padx=10, pady=10, columnspan=2, sticky="ew")
 mode_menu.bind("<<ComboboxSelected>>", update_mode)
+
+# 创建抠图算法选择下拉菜单
+algorithm_var = tk.StringVar(value="GrabCut")
+algorithm_label = ttk.Label(button_frame, text="选择抠图算法:", font=('Arial', 12))
+algorithm_label.grid(row=1, column=3, padx=10, pady=10, sticky="w")
+
+algorithm_menu = ttk.Combobox(button_frame, textvariable=algorithm_var, values=["GrabCut", "Color Filter"], font=('Arial', 12), state="readonly")
+algorithm_menu.grid(row=1, column=4, padx=10, pady=10, columnspan=2, sticky="ew")
+algorithm_menu.bind("<<ComboboxSelected>>", update_algorithm_choice)
+
 
 # 创建用于显示处理后图像的区域
 image_frame = ttk.Frame(segmentation_frame)
