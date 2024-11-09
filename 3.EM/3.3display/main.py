@@ -16,8 +16,6 @@ import warnings
 from sklearn.exceptions import ConvergenceWarning
 import joblib  # 确保导入 joblib 模块
 
-import matplotlib.font_manager as fm
-
 # 设置中文字体，防止中文显示乱码
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用SimHei字体
 plt.rcParams['axes.unicode_minus'] = False    # 解决负号显示为方块的问题
@@ -280,13 +278,18 @@ def confirm_segmentation():
             # 确保保存目录存在
             os.makedirs(save_dir, exist_ok=True)
 
+            # 获取模型参数，用于命名文件
+            cluster_count = n_components  # 聚类个数
+            init_method = init_params  # 初始化方式
+
             # 根据选择的模式设置保存路径，添加模式后缀
             mode_suffix = "_rgb" if selected_mode == "rgb" else "_gray"
-            output_filename = os.path.basename(current_processed_image_path).replace("_processed", f"_segmented{mode_suffix}")
+            output_filename = f"{cluster_count}_{init_method}_{algorithm}_{mode_suffix}.png"
             output_path = os.path.join(save_dir, output_filename)
 
             # 执行分割操作
-            apply_gmm_to_image(model_path, current_processed_image_path, output_path, mode=selected_mode, normalize=True)
+            apply_gmm_to_image(model_path, current_processed_image_path, output_path, mode=selected_mode,
+                               normalize=True)
 
             # 确定无边界的输出路径，并检查其保存是否成功
             no_boundaries_output_path = output_path.replace(".png", f"_no_boundaries.png")

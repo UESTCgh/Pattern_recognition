@@ -1,5 +1,11 @@
-# AI_VI
- 模式识别
+# AI_VI 模式识别大作业
+执行list.py可以更新directory_structure.md中的目录
+
+environment.yml为项目环境文件 使用下面代码创建
+
+```
+conda env create -f environment.yml
+```
 
 ## 项目结构
 
@@ -19,14 +25,17 @@ E:/GitHub/AI_VI/
 └── 3.EM/                        # 高斯混合模型与图像处理实验
     ├── 3.1EM/                   # 初始EM模型部分
     ├── 3.2fishdis/              # 基于EM模型的鱼类图像分割实验
-    │   ├── result/              # 保存分割与聚类结果的目录
-    │   ├── main.py              # 主程序文件
     │   ├── data/                # 数据目录，包含原始图片与模型
+    │   ├── result/              # 保存分割与聚类结果的目录
+    │       ├── GrabCut/         # GrabCut 算法抠图与分割结果
+    │       ├── ColorFilter/     # ColorFilter 算法抠图与分割结果
+    │   ├── main.py              # 主程序文件
     │   ├── README.md            # 该部分的说明文件
-    └── 实验结果汇总/             # 所有实验的最终结果汇总目录
+    └── 实验结果汇总/              # 所有实验的最终结果汇总目录
         ├── 任务1/               # 任务1的实验结果
         ├── 任务2/               # 任务2的实验结果
         └── README.md            # 最终实验结果的描述
+
 ```
 
 
