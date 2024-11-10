@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, simpledialog, messagebox
 from tkinter import ttk
 from PIL import Image, ImageTk
 import cv2
@@ -15,6 +15,7 @@ import scipy.io
 import warnings
 from sklearn.exceptions import ConvergenceWarning
 import joblib  # 确保导入 joblib 模块
+
 
 # 设置中文字体，防止中文显示乱码
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用SimHei字体
@@ -200,7 +201,6 @@ def select_file():
         current_image_path = file_path
         load_image(file_path)
 
-
 # 加载图像显示在界面上
 # 修改 load_image 函数以调整图片大小
 def load_image(image_path):
@@ -221,10 +221,10 @@ def generate_nemo_mask(img):
     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     hsv_img = cv2.cvtColor(rgb_img, cv2.COLOR_RGB2HSV)
 
-    light_orange = (5, 100, 120)
-    dark_orange = (20, 255, 255)
-    light_white = (35, 0, 160)
-    dark_light = (255, 160, 255)
+    light_orange = (5, 50, 80)
+    dark_orange = (30, 255, 250)
+    light_white = (0, 0, 160)
+    dark_light = (255, 65, 255)
 
     mask1 = cv2.inRange(hsv_img, light_orange, dark_orange)
     mask2 = cv2.inRange(hsv_img, light_white, dark_light)
@@ -248,6 +248,68 @@ def extract_fish_with_color_filter(image_path, save_path):
     # 保存处理结果
     cv2.imwrite(save_path, segmented_img)
 
+from sklearn.cluster import KMeans
+
+def extract_fish_with_Kmeans(image_path, save_path, k=3):
+    # 读取图像并转换为 RGB 格式
+    image = cv2.imread(image_path)
+    if image is None:
+        print(f"无法读取图像: {image_path}")
+        return
+
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pixel_values = image_rgb.reshape((-1, 3))  # 将图像重塑为 (像素数, 3) 的数组
+    pixel_values = np.float32(pixel_values)  # 转换为 float32 类型
+
+    # 使用 KMeans 进行聚类
+    kmeans = KMeans(n_clusters=k, n_init='auto', random_state=42)
+    labels = kmeans.fit_predict(pixel_values)
+    segmented_image = kmeans.cluster_centers_[labels]  # 使用聚类中心值替换像素值
+    segmented_image = segmented_image.reshape(image_rgb.shape).astype(np.uint8)
+
+    # 生成初步掩码，假设鱼的颜色亮度高，结合 Otsu 二值化和颜色过滤
+    gray_segmented = cv2.cvtColor(segmented_image, cv2.COLOR_RGB2GRAY)
+    _, otsu_mask = cv2.threshold(gray_segmented, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # 定义橙色和白色的 HSV 范围
+    hsv_image = cv2.cvtColor(segmented_image, cv2.COLOR_RGB2HSV)
+    lower_orange = np.array([5, 50, 80])
+    upper_orange = np.array([30, 255, 250])
+    lower_white = np.array([0, 0, 160])
+    upper_white = np.array([255, 65, 255])
+
+    # 创建颜色掩码
+    mask_orange = cv2.inRange(hsv_image, lower_orange, upper_orange)
+    mask_white = cv2.inRange(hsv_image, lower_white, upper_white)
+    color_mask = cv2.bitwise_or(mask_orange, mask_white)
+
+    # 合并 Otsu 掩码和颜色掩码
+    initial_mask = cv2.bitwise_and(otsu_mask, color_mask)
+
+    # 形态学操作去除小块噪声
+    kernel = np.ones((5, 5), np.uint8)
+    initial_mask = cv2.morphologyEx(initial_mask, cv2.MORPH_CLOSE, kernel)
+    initial_mask = cv2.morphologyEx(initial_mask, cv2.MORPH_OPEN, kernel)
+
+    # 使用初步掩码和 GrabCut 进行进一步细化
+    mask = np.zeros(image.shape[:2], np.uint8)
+    mask[initial_mask == 255] = cv2.GC_PR_FGD
+    mask[initial_mask == 0] = cv2.GC_PR_BGD
+    bgd_model = np.zeros((1, 65), np.float64)
+    fgd_model = np.zeros((1, 65), np.float64)
+
+    # 使用 GrabCut 算法细化边界，增加迭代次数
+    cv2.grabCut(image, mask, None, bgd_model, fgd_model, 10, cv2.GC_INIT_WITH_MASK)
+    final_mask = np.where((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 255, 0).astype('uint8')
+
+    # 使用最终掩码提取鱼的区域
+    result = cv2.bitwise_and(image, image, mask=final_mask)
+
+    # 保存结果
+    cv2.imwrite(save_path, result)
+    print(f"分割结果已保存至: {save_path}")
+
+
 # 修改 confirm_grabcut 函数以支持新的算法选择
 def confirm_grabcut():
     try:
@@ -262,7 +324,7 @@ def confirm_grabcut():
             algorithm = algorithm_choice  # 如果是字符串，则直接使用
 
         # 确保选择了有效的抠图算法
-        if algorithm not in ["GrabCut", "Color Filter", "Counter Filter"]:
+        if algorithm not in ["GrabCut", "Color Filter", "Counter Filter","Kmeans"]:
             messagebox.showerror("错误", "无效的抠图算法选择！")
             return
 
@@ -274,6 +336,8 @@ def confirm_grabcut():
             save_dir = os.path.join(result_dir, "ColorFilter")
         elif algorithm == "Counter Filter":
             save_dir = os.path.join(result_dir, "CounterFilter")
+        elif algorithm == "Kmeans":
+            save_dir = os.path.join(result_dir, "Kmeans")
 
         # 创建保存目录（如果目录不存在则创建）
         os.makedirs(save_dir, exist_ok=True)
@@ -288,6 +352,8 @@ def confirm_grabcut():
             extract_fish_with_color_filter(current_image_path, save_path)
         elif algorithm == "Counter Filter":
             extract_fish_with_counter(current_image_path, save_path)
+        elif algorithm == "Kmeans":
+            extract_fish_with_Kmeans(current_image_path, save_path,k_value)
 
         # 更新显示处理后的图像
         load_image(save_path)
@@ -318,6 +384,8 @@ def confirm_segmentation():
                 save_dir = os.path.join("result", "ColorFilter")
             elif algorithm == "Counter Filter":
                 save_dir = os.path.join("result", "CounterFilter")
+            elif algorithm == "Kmeans":
+                save_dir = os.path.join("result", "Kmeans")
             else:
                 messagebox.showerror("错误", "无效的抠图算法选择！")
                 return
@@ -495,10 +563,19 @@ def visualize_gmm_training(data_type, parent_frame):
     except Exception as e:
         messagebox.showerror("训练失败", f"在训练过程中遇到问题：{str(e)}")
 
-# 更新抠图算法选择
+
+# 更新抠图算法选择并在选择 KMeans 时弹出 K 值选择框
 def update_algorithm_choice(event):
-    global algorithm_choice
+    global algorithm_choice, k_value
     algorithm_choice = algorithm_var.get()
+
+    if algorithm_choice == "Kmeans":
+        # 弹出一个对话框让用户输入 K 值，仅在选择 KMeans 时触发
+        k_value = simpledialog.askinteger("选择 K 值", "请输入聚类数 K（推荐2-5）:", minvalue=2, maxvalue=10)
+        if k_value is not None:
+            messagebox.showinfo("提示", f"K 值已设置为 {k_value}")
+        else:
+            messagebox.showwarning("警告", "K 值未设置")
 
 # 创建 GUI
 root = tk.Tk()
@@ -557,7 +634,7 @@ algorithm_label = ttk.Label(button_frame, text="选择抠图算法:", font=('Ari
 algorithm_label.grid(row=1, column=3, padx=10, pady=10, sticky="w")
 
 # 将 extract_fish_with_counter 加入选择列表
-algorithm_menu = ttk.Combobox(button_frame, textvariable=algorithm_var, values=["GrabCut", "Color Filter", "Counter Filter"], font=('Arial', 12), state="readonly")
+algorithm_menu = ttk.Combobox(button_frame, textvariable=algorithm_var, values=["GrabCut", "Color Filter", "Counter Filter", "Kmeans"], font=('Arial', 12), state="readonly")
 algorithm_menu.grid(row=1, column=4, padx=10, pady=10, columnspan=2, sticky="ew")
 algorithm_menu.bind("<<ComboboxSelected>>", update_algorithm_choice)
 
