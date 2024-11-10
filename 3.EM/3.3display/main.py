@@ -25,7 +25,6 @@ MODEL_SAVE_DIR = "trained_models"
 os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
 
 # 定义全局变量用于存储模型路径和图像路径
-model_path = ""
 current_image_path = ""
 current_processed_image_path = ""
 dataset_path = ""
@@ -36,9 +35,37 @@ max_iterations = 10  # 最大训练轮次，默认10
 COMBINED_DIR = "combined"  # 用于保存合成图的目录
 os.makedirs(COMBINED_DIR, exist_ok=True)
 
+def extract_fish_with_grabcut(image_path, save_path):
+    # 读取图像
+    image = cv2.imread(image_path)
+    if image is None:
+        print(f"无法读取图像: {image_path}")
+        return
+
+    # 转换图像为 RGB 格式（为了视觉一致性）
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    # 初始化掩码、矩形框和模型
+    mask = np.zeros(image.shape[:2], np.uint8)
+    rect = (50, 50, image.shape[1] - 100, image.shape[0] - 100)  # 假设鱼大致在图像中央
+    bgd_model = np.zeros((1, 65), np.float64)
+    fgd_model = np.zeros((1, 65), np.float64)
+
+    # 应用 GrabCut 算法
+    cv2.grabCut(image, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+
+    # 生成前景掩码
+    mask_foreground = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+    fish_result = image_rgb * mask_foreground[:, :, np.newaxis]
+
+    # 保存结果
+    result_bgr = cv2.cvtColor(fish_result, cv2.COLOR_RGB2BGR)
+    save_path = save_path.replace(".bmp", ".png")  # 将保存路径修改为 PNG 格式
+    cv2.imwrite(save_path, result_bgr)
+    print(f"分割结果已保存至: {save_path}")
 
 # 抠图函数，使用你的详细抠图逻辑
-def extract_fish_with_grabcut(image_path, save_path):
+def extract_fish_with_counter(image_path, save_path):
     image = cv2.imread(image_path)
     if image is None:
         print(f"无法读取图像: {image_path}")
@@ -143,14 +170,27 @@ def apply_gmm_to_image(gmm_model_path, image_path, output_path, mode='gray', nor
     no_boundaries_output_path = output_path.replace(".png", "_no_boundaries.png")
     Image.fromarray(clustered_image_data).save(no_boundaries_output_path)
 
+# 定义全局变量
+model_path = ""
+model_params = {}  # 用于存储加载的模型参数
 
-# 选择模型路径
+# 选择模型路径并加载
 def load_model():
-    global model_path
+    global model_path, model_params
     model_path = filedialog.askopenfilename(filetypes=[("Model files", "*.pkl")])
     if model_path:
-        messagebox.showinfo("模型加载", f"成功加载模型：{model_path}")
+        try:
+            # 加载模型
+            gmm = joblib.load(model_path)
 
+            # 从模型中获取参数
+            model_params['n_components'] = gmm.n_components
+            model_params['init_params'] = getattr(gmm, 'init_params', 'unknown')  # 尝试获取 init_params
+
+            messagebox.showinfo("模型加载",
+                                f"成功加载模型：{model_path}\n聚类个数: {model_params['n_components']}\n初始化方式: {model_params['init_params']}")
+        except Exception as e:
+            messagebox.showerror("模型加载失败", f"加载模型时出错: {str(e)}")
 
 # 选择文件函数
 def select_file():
@@ -208,6 +248,7 @@ def extract_fish_with_color_filter(image_path, save_path):
     # 保存处理结果
     cv2.imwrite(save_path, segmented_img)
 
+# 修改 confirm_grabcut 函数以支持新的算法选择
 def confirm_grabcut():
     try:
         if not current_image_path:
@@ -220,7 +261,8 @@ def confirm_grabcut():
         else:
             algorithm = algorithm_choice  # 如果是字符串，则直接使用
 
-        if algorithm not in ["GrabCut", "Color Filter"]:
+        # 确保选择了有效的抠图算法
+        if algorithm not in ["GrabCut", "Color Filter", "Counter Filter"]:
             messagebox.showerror("错误", "无效的抠图算法选择！")
             return
 
@@ -230,6 +272,8 @@ def confirm_grabcut():
             save_dir = os.path.join(result_dir, "GrabCut")
         elif algorithm == "Color Filter":
             save_dir = os.path.join(result_dir, "ColorFilter")
+        elif algorithm == "Counter Filter":
+            save_dir = os.path.join(result_dir, "CounterFilter")
 
         # 创建保存目录（如果目录不存在则创建）
         os.makedirs(save_dir, exist_ok=True)
@@ -242,6 +286,8 @@ def confirm_grabcut():
             extract_fish_with_grabcut(current_image_path, save_path)
         elif algorithm == "Color Filter":
             extract_fish_with_color_filter(current_image_path, save_path)
+        elif algorithm == "Counter Filter":
+            extract_fish_with_counter(current_image_path, save_path)
 
         # 更新显示处理后的图像
         load_image(save_path)
@@ -250,7 +296,6 @@ def confirm_grabcut():
 
     except Exception as e:
         messagebox.showerror("错误", f"抠图处理时出错: {str(e)}")
-
 
 
 # 处理图像进行分割
@@ -271,6 +316,8 @@ def confirm_segmentation():
                 save_dir = os.path.join("result", "GrabCut")
             elif algorithm == "Color Filter":
                 save_dir = os.path.join("result", "ColorFilter")
+            elif algorithm == "Counter Filter":
+                save_dir = os.path.join("result", "CounterFilter")
             else:
                 messagebox.showerror("错误", "无效的抠图算法选择！")
                 return
@@ -279,8 +326,8 @@ def confirm_segmentation():
             os.makedirs(save_dir, exist_ok=True)
 
             # 获取模型参数，用于命名文件
-            cluster_count = n_components  # 聚类个数
-            init_method = init_params  # 初始化方式
+            cluster_count = model_params.get('n_components', 'unknown')  # 从加载的模型参数中获取聚类个数
+            init_method = model_params.get('init_params', 'unknown')  # 从加载的模型参数中获取初始化方式
 
             # 根据选择的模式设置保存路径，添加模式后缀
             mode_suffix = "_rgb" if selected_mode == "rgb" else "_gray"
@@ -308,10 +355,7 @@ def confirm_segmentation():
     except Exception as e:
         messagebox.showerror("错误", f"分割处理时出错: {str(e)}")
 
-
-
 # 显示处理后的图像
-# 修改 display_result 函数，以 600x600 大小显示分割后的图像
 def display_result(segmented_image):
     # 调整图像大小，设置为 600x600 像素
 
@@ -321,7 +365,6 @@ def display_result(segmented_image):
     image_label.config(image=img_tk)
     image_label.image = img_tk
 
-
 # 更新模式选择的函数
 def update_mode(event):
     global selected_mode
@@ -330,7 +373,6 @@ def update_mode(event):
         messagebox.showerror("模式选择错误", "无效的模式选择！请使用 'gray' 或 'rgb'。")
     else:
         selected_mode = mode
-
 
 # 从MAT文件加载数据
 def select_dataset():
@@ -346,7 +388,6 @@ def select_dataset():
         messagebox.showinfo("数据集加载", f"成功加载数据集：{dataset_path}")
     else:
         messagebox.showwarning("数据集加载失败", "未选择数据集路径，请重新选择。")
-
 
 def load_mat_data(data_type):
     try:
@@ -454,7 +495,6 @@ def visualize_gmm_training(data_type, parent_frame):
     except Exception as e:
         messagebox.showerror("训练失败", f"在训练过程中遇到问题：{str(e)}")
 
-
 # 更新抠图算法选择
 def update_algorithm_choice(event):
     global algorithm_choice
@@ -516,7 +556,8 @@ algorithm_var = tk.StringVar(value="GrabCut")
 algorithm_label = ttk.Label(button_frame, text="选择抠图算法:", font=('Arial', 12))
 algorithm_label.grid(row=1, column=3, padx=10, pady=10, sticky="w")
 
-algorithm_menu = ttk.Combobox(button_frame, textvariable=algorithm_var, values=["GrabCut", "Color Filter"], font=('Arial', 12), state="readonly")
+# 将 extract_fish_with_counter 加入选择列表
+algorithm_menu = ttk.Combobox(button_frame, textvariable=algorithm_var, values=["GrabCut", "Color Filter", "Counter Filter"], font=('Arial', 12), state="readonly")
 algorithm_menu.grid(row=1, column=4, padx=10, pady=10, columnspan=2, sticky="ew")
 algorithm_menu.bind("<<ComboboxSelected>>", update_algorithm_choice)
 
@@ -554,14 +595,12 @@ def update_n_components():
     except ValueError:
         messagebox.showerror("输入错误", "请输入有效的聚类个数")
 
-
 init_params_label = ttk.Label(gmm_button_frame, text="初始化方式:", font=('Arial', 12))
 init_params_label.grid(row=0, column=3, padx=5)
 
 init_params_menu = ttk.Combobox(gmm_button_frame, values=["kmeans", "random"], font=('Arial', 12), state="readonly")
 init_params_menu.grid(row=0, column=4, padx=5)
 init_params_menu.set("kmeans")
-
 
 def update_init_params(event=None):
     global init_params
