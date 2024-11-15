@@ -9,10 +9,17 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report
 from imblearn.over_sampling import SMOTE
 
+# ---------------------------- 设置训练设备 ----------------------------
+
+# 设置设备为 GPU 或 CPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    print(f"使用 GPU: {torch.cuda.get_device_name(0)}")
+
 # ---------------------------- 超参数设置 ----------------------------
 
 # 学习率和训练轮次
-learning_rate = 0.01
+learning_rate = 0.008
 epochs = 100
 
 # 早停相关设置
@@ -24,6 +31,8 @@ patience_counter = 0
 image_height = 19
 image_width = 19
 
+# 给类别 1 （正类）更高的权重
+class_weights = torch.tensor([1, 160.0]).to(device)  # 可以根据实际情况调整权重
 # ---------------------------- 数据加载与预处理 ----------------------------
 
 # 加载训练数据和标签
@@ -71,7 +80,6 @@ train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
 # ---------------------------- 定义 CNN 模型 ----------------------------
-
 class CNNModel(nn.Module):
     def __init__(self, image_height, image_width):
         super(CNNModel, self).__init__()
@@ -112,20 +120,13 @@ class CNNModel(nn.Module):
 
         return x
 
-# ---------------------------- 设置训练设备 ----------------------------
-
-# 设置设备为 GPU 或 CPU
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if torch.cuda.is_available():
-    print(f"使用 GPU: {torch.cuda.get_device_name(0)}")
 
 # ---------------------------- 创建模型和优化器 ----------------------------
 
 # 创建模型实例
 model = CNNModel(image_height, image_width).to(device)
 
-# 给类别 1 （正类）更高的权重
-class_weights = torch.tensor([1.0, 100.0]).to(device)  # 可以根据实际情况调整权重
+
 criterion = nn.CrossEntropyLoss(weight=class_weights)  # 损失函数
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)  # 优化器
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)  # 动态调整学习率
