@@ -1,0 +1,42 @@
+C:\Users\14171\.conda\envs\tenserflow\python.exe E:\GitHub\AI_VI\4.Face\2.CNN\src\1.py 
+使用 GPU: NVIDIA GeForce GTX 1650 Ti
+Epoch 1/100, Loss: 0.1783
+Epoch 2/100, Loss: 0.1411
+Epoch 3/100, Loss: 0.0478
+Epoch 4/100, Loss: 0.0455
+Epoch 5/100, Loss: 0.0375
+Epoch 6/100, Loss: 0.0282
+Epoch 7/100, Loss: 0.0351
+Epoch 8/100, Loss: 0.0259
+Epoch 9/100, Loss: 0.0165
+Epoch 10/100, Loss: 0.0134
+Epoch 11/100, Loss: 0.0238
+Epoch 12/100, Loss: 0.0054
+Epoch 13/100, Loss: 0.0013
+Epoch 14/100, Loss: 0.0021
+Epoch 15/100, Loss: 0.0014
+Epoch 16/100, Loss: 0.0006
+Epoch 17/100, Loss: 0.0008
+Epoch 18/100, Loss: 0.0261
+Epoch 19/100, Loss: 0.0519
+Epoch 20/100, Loss: 0.0201
+Epoch    20: reducing learning rate of group 0 to 4.0000e-03.
+Epoch 21/100, Loss: 0.0064
+早停触发，停止训练。
+测试集准确率: 0.93
+测试集精确率: 0.95
+测试集召回率: 0.77
+测试集F1得分: 0.85
+混淆矩阵:
+[[303   5]
+ [ 26  86]]
+
+分类报告:
+              precision    recall  f1-score   support
+
+           0       0.92      0.98      0.95       308
+           1       0.95      0.77      0.85       112
+
+    accuracy                           0.93       420
+   macro avg       0.93      0.88      0.90       420
+weighted avg       0.93      0.93      0.92       420
