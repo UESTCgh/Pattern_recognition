@@ -111,35 +111,15 @@ def apply_data_augmentations(train_data, train_labels):
     plt.figure(figsize=(12, 4))
 
     plt.subplot(1, 3, 1)
-    plt.imshow(train_data_tensor[338, 0], cmap='gray')
+    plt.imshow(train_data_tensor[11, 0], cmap='gray')
     plt.title('原始数据样本')
 
     plt.subplot(1, 3, 2)
-    plt.imshow(flipped_data[338, 0], cmap='gray')
+    plt.imshow(flipped_data[1, 0], cmap='gray')
     plt.title('水平翻转后的样本')
 
     plt.subplot(1, 3, 3)
-    plt.imshow(noisy_data[338, 0], cmap='gray')
-    plt.title('添加高斯噪声后的样本')
-
-    plt.tight_layout()
-
-    plt.savefig('Data_noface.png')
-    plt.show()
-
-    # 可视化数据增强后的数据分布
-    plt.figure(figsize=(12, 4))
-
-    plt.subplot(1, 3, 1)
-    plt.imshow(train_data_tensor[2, 0], cmap='gray')
-    plt.title('原始数据样本')
-
-    plt.subplot(1, 3, 2)
-    plt.imshow(flipped_data[2, 0], cmap='gray')
-    plt.title('水平翻转后的样本')
-
-    plt.subplot(1, 3, 3)
-    plt.imshow(noisy_data[2, 0], cmap='gray')
+    plt.imshow(noisy_data[100, 0], cmap='gray')
     plt.title('添加高斯噪声后的样本')
 
     plt.tight_layout()
