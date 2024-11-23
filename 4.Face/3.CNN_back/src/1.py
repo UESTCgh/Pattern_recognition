@@ -8,112 +8,131 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report
 from imblearn.over_sampling import SMOTE
+import matplotlib.pyplot as plt
 
-from torchvision import transforms
-import os
+# 设置字体，SimHei 字体可以显示中文
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False  # 防止负号显示为方块
 
-# ---------------------------- 设置训练设备 ----------------------------
+def setup_device():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        print(f"使用 GPU: {torch.cuda.get_device_name(0)}")
+    return device
 
-# 设置设备为 GPU 或 CPU
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if torch.cuda.is_available():
-    print(f"使用 GPU: {torch.cuda.get_device_name(0)}")
+# 设置设备
+device = setup_device()
 
-# ---------------------------- 超参数设置 ----------------------------
-# 学习率和训练轮次
+# -----------------------------设置超参数---------------------------------
 learning_rate = 0.008
 epochs = 100
-
-# 早停相关设置
-early_stop_patience = 5
-best_loss = float('inf')
-patience_counter = 0
-
-# 图像大小，假设为 19x19（可以根据需要调整）
-image_height = 19
-image_width = 19
-
-#训练规模
+early_stop_patience = 10
+image_height, image_width = 19, 19
 batch_size = 16
-
-# 设置是否进行数据增强
 apply_data_augmentation = False
+class_weights = torch.tensor([1, 160.0]).to(device)
+weight_decay = 5e-4
+scheduler_factor = 0.7
+scheduler_patience = 4
 
-# 给类别 1 （正类）更高的权重
-class_weights = torch.tensor([1, 140.0]).to(device)  # 可以根据实际情况调整权重
+# 数据预处理
 
-#训练参数
-weight_decay = 1e-4  # 权重衰减，用于 L2 正则化
-scheduler_factor = 0.5  # 学习率调度器减少学习率的因子
-scheduler_patience = 3  # 学习率调度器的耐心值
-# ---------------------------- 数据加载与预处理 ----------------------------
+def load_and_preprocess_data(image_height, image_width, apply_data_augmentation):
+    # 加载训练数据和标签
+    train_data = sio.loadmat('../data/train_data.mat')['train_data']  # 训练数据
+    train_label = pd.read_csv('../data/train_label.csv', header=None).values.ravel()  # 训练标签
 
-# 加载训练数据和标签
-train_data = sio.loadmat('../data/train_data.mat')['train_data']  # 训练数据
-train_label = pd.read_csv('../data/train_label.csv', header=None).values.ravel()  # 训练标签
+    # 加载测试数据和标签
+    test_data = sio.loadmat('../data/test_data.mat')['test_data']  # 测试数据
+    test_label_manual = sio.loadmat('../data/test_label_manual.mat')['test_label_manual'].ravel()  # 测试标签
 
-# 加载测试数据和标签
-test_data = sio.loadmat('../data/test_data.mat')['test_data']  # 测试数据
-test_label_manual = sio.loadmat('../data/test_label_manual.mat')['test_label_manual'].ravel()  # 测试标签
+    # 数据标准化处理
+    scaler = StandardScaler()
+    train_data = scaler.fit_transform(train_data)
+    test_data = scaler.transform(test_data)
 
-# 数据标准化处理
-scaler = StandardScaler()
-train_data = scaler.fit_transform(train_data)
-test_data = scaler.transform(test_data)
+    # 使用SMOTE进行数据增强（解决类别不平衡）
+    smote = SMOTE(random_state=42)
+    train_data_resampled, train_label_resampled = smote.fit_resample(train_data, train_label)
 
-# 使用SMOTE进行数据增强（解决类别不平衡）
-smote = SMOTE(random_state=42)
-train_data_resampled, train_label_resampled = smote.fit_resample(train_data, train_label)
+    # 可视化原始数据和增强后的数据集分布
+    plt.figure(figsize=(12, 6))
 
-# 标签转换：将 -1 转换为 0，符合 CrossEntropyLoss 要求
-train_label_resampled = np.where(train_label_resampled == -1, 0, train_label_resampled)
-test_label_manual = np.where(test_label_manual == -1, 0, test_label_manual)
+    plt.subplot(1, 2, 1)
+    plt.scatter(train_data[:, 0], train_data[:, 1], c=train_label, alpha=0.5, cmap='viridis')
+    plt.title('原始训练数据集分布')
+    plt.xlabel('特征1')
+    plt.ylabel('特征2')
 
-# 将训练数据转换为图像格式
-train_data_resampled = train_data_resampled.reshape((-1, 1, image_height, image_width))
-test_data = test_data.reshape((-1, 1, image_height, image_width))
+    plt.subplot(1, 2, 2)
+    plt.scatter(train_data_resampled[:, 0], train_data_resampled[:, 1], c=train_label_resampled, alpha=0.5, cmap='viridis')
+    plt.title('SMOTE增强后的数据集分布')
+    plt.xlabel('特征1')
+    plt.ylabel('特征2')
 
-# ---------------------------- 数据增强选项 ----------------------------
-if apply_data_augmentation:
-    # ---------------------------- 数据增强 - 镜像和加噪声 ----------------------------
-    def add_gaussian_noise(images, mean=0, std=0.1):
+    plt.tight_layout()
+    plt.show()
+
+    # 标签转换：将 -1 转换为 0，符合 CrossEntropyLoss 要求
+    train_label_resampled = np.where(train_label_resampled == -1, 0, train_label_resampled)
+    test_label_manual = np.where(test_label_manual == -1, 0, test_label_manual)
+
+    # 将训练数据转换为图像格式
+    train_data_resampled = train_data_resampled.reshape((-1, 1, image_height, image_width))
+    test_data = test_data.reshape((-1, 1, image_height, image_width))
+
+    # ---------------------------- 数据增强选项 ----------------------------
+    if apply_data_augmentation:
+        train_data_resampled, train_label_resampled = apply_data_augmentations(train_data_resampled,
+                                                                               train_label_resampled)
+
+    augmented_data = torch.tensor(train_data_resampled, dtype=torch.float32).clone().detach()
+    augmented_labels = train_label_resampled
+    test_data_tensor = torch.tensor(test_data, dtype=torch.float32)
+
+    # 打印训练数据集数量
+    print(f"训练数据集数量: {augmented_data.shape[0]}")
+    print(f"训练标签数量: {augmented_labels.shape[0]}")
+
+    return augmented_data, augmented_labels, test_data_tensor, test_label_manual
+
+
+def apply_data_augmentations(train_data, train_labels):
+    def add_gaussian_noise(images, mean=0, std=1):
         noise = torch.randn_like(images) * std + mean
         noisy_images = images + noise
         noisy_images = torch.clamp(noisy_images, 0., 1.)  # 限制像素值在0到1之间
         return noisy_images
 
-    # 将训练数据转换为 Tensor
-    train_data_tensor = torch.tensor(train_data_resampled, dtype=torch.float32)
-
-    # 水平镜像翻转
-    flipped_data = torch.flip(train_data_tensor, dims=[3])  # 对第3个维度（宽度）进行水平翻转
-
-    # 添加高斯噪声
+    train_data_tensor = torch.tensor(train_data, dtype=torch.float32)
+    flipped_data = torch.flip(train_data_tensor, dims=[3])  # 水平镜像翻转
     noisy_data = add_gaussian_noise(train_data_tensor)
-
-    # 合并原始数据、镜像数据和加噪声数据
     augmented_data = torch.cat((train_data_tensor, flipped_data, noisy_data), dim=0)
+    augmented_labels = np.concatenate((train_labels, train_labels, train_labels))
 
-    # 合并标签（每种增强方式都有与原始数据相同的标签）
-    augmented_labels = np.concatenate((train_label_resampled, train_label_resampled, train_label_resampled))
+    # 可视化数据增强后的数据分布
+    plt.figure(figsize=(12, 4))
 
-    # 打印扩充后的数据集数量
-    print(f"扩充后的训练数据集数量: {augmented_data.shape[0]}")
-    print(f"扩充后的训练标签数量: {augmented_labels.shape[0]}")
-else:
-    # 如果不进行数据增强，则使用原始数据
-    augmented_data = torch.tensor(train_data_resampled, dtype=torch.float32)
-    augmented_labels = train_label_resampled
+    plt.subplot(1, 3, 1)
+    plt.imshow(train_data_tensor[0, 0], cmap='gray')
+    plt.title('原始数据样本')
 
-    # 打印原始训练数据集数量
-    print(f"原始训练数据集数量: {augmented_data.shape[0]}")
-    print(f"原始训练标签数量: {augmented_labels.shape[0]}")
+    plt.subplot(1, 3, 2)
+    plt.imshow(flipped_data[0, 0], cmap='gray')
+    plt.title('水平翻转后的样本')
 
-# ---------------------------- 自定义数据集类 ----------------------------
+    plt.subplot(1, 3, 3)
+    plt.imshow(noisy_data[0, 0], cmap='gray')
+    plt.title('添加高斯噪声后的样本')
+
+    plt.tight_layout()
+    plt.show()
+
+    return augmented_data, augmented_labels
 
 class FacialDataset(Dataset):
     def __init__(self, data, labels):
-        self.data = data
+        self.data = data.clone().detach()  # 修复用户警告
         self.labels = torch.tensor(labels, dtype=torch.long)
 
     def __len__(self):
@@ -122,12 +141,7 @@ class FacialDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx], self.labels[idx]
 
-# 创建训练和测试数据集及数据加载器
-train_dataset = FacialDataset(augmented_data, augmented_labels)
-test_dataset = FacialDataset(torch.tensor(test_data, dtype=torch.float32), test_label_manual)
-train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
-# ---------------------------- 定义 CNN 模型 ----------------------------
+
 class CNNModel(nn.Module):
     def __init__(self, image_height, image_width):
         super(CNNModel, self).__init__()
@@ -168,125 +182,170 @@ class CNNModel(nn.Module):
 
         return x
 
-# ---------------------------- 创建模型和优化器 ----------------------------
 
-# 创建模型实例
-model = CNNModel(image_height, image_width).to(device)
+def train_model(model, train_loader, criterion, optimizer, scheduler, device, epochs, early_stop_patience):
+    import matplotlib.pyplot as plt
+    train_losses = []
+    best_loss = float('inf')
+    patience_counter = 0
 
-# ---------------------------- 配置训练参数 ----------------------------
-criterion = nn.CrossEntropyLoss(weight=class_weights)  # 损失函数
-optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)  # 优化器
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer, mode='min', factor=scheduler_factor, patience=scheduler_patience, verbose=True
-)  # 学习率调度器
-# ---------------------------- 训练模型 ----------------------------
+    model.train()
+    for epoch in range(epochs):
+        running_loss = 0.0
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
 
-# 训练循环
-model.train()
-for epoch in range(epochs):
-    running_loss = 0.0
-    for inputs, labels in train_loader:
-        inputs, labels = inputs.to(device), labels.to(device)
+            # 清零梯度
+            optimizer.zero_grad()
 
-        # 清零梯度
-        optimizer.zero_grad()
+            # 前向传播
+            outputs = model(inputs)
 
-        # 前向传播
-        outputs = model(inputs)
+            # 计算损失
+            loss = criterion(outputs, labels)
 
-        # 计算损失
-        loss = criterion(outputs, labels)
+            # 反向传播和优化
+            loss.backward()
+            optimizer.step()
 
-        # 反向传播和优化
-        loss.backward()
-        optimizer.step()
+            running_loss += loss.item()
 
-        running_loss += loss.item()
+        avg_loss = running_loss / len(train_loader)
+        train_losses.append(avg_loss)
+        print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}")
 
-    avg_loss = running_loss / len(train_loader)
-    print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}")
+        # 调整学习率
+        scheduler.step(avg_loss)
 
-    # 调整学习率
-    scheduler.step(avg_loss)
+        # 早停条件判断
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
 
-    # 早停条件判断
-    if avg_loss < best_loss:
-        best_loss = avg_loss
-        patience_counter = 0
-    else:
-        patience_counter += 1
+        if patience_counter >= early_stop_patience:
+            print("早停触发，停止训练。")
+            break
 
-    if patience_counter >= early_stop_patience:
-        print("早停触发，停止训练。")
-        break
+    # 绘制损失曲线
+    plt.figure()
+    plt.plot(range(1, len(train_losses) + 1), train_losses, marker='o', linestyle='-', color='b', label='训练损失')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('训练损失曲线')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
-# 在整个训练完成后保存模型
-torch.save(model.state_dict(), 'final_trained_model.pth')
-print("训练完成，模型已保存为 'final_trained_model.pth'")
+    torch.save(model.state_dict(), 'final_trained_model.pth')
+    print("训练完成，模型已保存为 'final_trained_model.pth'")
 
-# ---------------------------- 测试模型 ----------------------------
+def evaluate_model(model, test_loader, test_labels, device, threshold=0.4):
+    from sklearn.metrics import roc_curve, auc, precision_recall_curve, confusion_matrix, ConfusionMatrixDisplay
+    import matplotlib.pyplot as plt
+    model.load_state_dict(torch.load('final_trained_model.pth'))
+    model.eval()
 
-# 加载训练好的模型
-model.load_state_dict(torch.load('final_trained_model.pth'))
-model.eval()
+    all_predictions = []
+    all_probabilities = []
+    with torch.no_grad():
+        for inputs, _ in test_loader:
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            probabilities = torch.softmax(outputs, dim=1)[:, 1]
+            all_probabilities.extend(probabilities.cpu().numpy())
+            predicted = (probabilities > threshold).long()
+            all_predictions.extend(predicted.cpu().numpy())
 
-all_predictions = []
-with torch.no_grad():
-    for inputs, _ in test_loader:
-        inputs = inputs.to(device)
-        outputs = model(inputs)
-        _, predicted = torch.max(outputs, 1)
-        all_predictions.extend(predicted.cpu().numpy())
+    # 绘制 ROC 和 PR 曲线
+    fpr, tpr, _ = roc_curve(test_labels, all_probabilities)
+    roc_auc = auc(fpr, tpr)
 
-# 计算多种评价指标
-accuracy = accuracy_score(test_label_manual, all_predictions)
-precision = precision_score(test_label_manual, all_predictions, average='binary', pos_label=1)
-recall = recall_score(test_label_manual, all_predictions, average='binary', pos_label=1)
-f1 = f1_score(test_label_manual, all_predictions, average='binary', pos_label=1)
-conf_matrix = confusion_matrix(test_label_manual, all_predictions)
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(fpr, tpr, color='b', lw=2, label=f'ROC 曲线 (AUC = {roc_auc:.2f})')
+    plt.fill_between(fpr, tpr, alpha=0.3, color='blue')
+    plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
+    plt.xlabel('假阳性率')
+    plt.ylabel('真正率')
+    plt.title('ROC 曲线')
+    plt.legend(loc='lower right')
 
-# 打印评价指标
-print(f"测试集准确率: {accuracy:.2f}")
-print(f"测试集精确率: {precision:.2f}")
-print(f"测试集召回率: {recall:.2f}")
-print(f"测试集F1得分: {f1:.2f}")
-print("混淆矩阵:")
-print(conf_matrix)
+    precision, recall, _ = precision_recall_curve(test_labels, all_probabilities)
+    plt.subplot(1, 2, 2)
+    plt.plot(recall, precision, color='b', lw=2)
+    plt.fill_between(recall, precision, alpha=0.3, color='blue')
+    plt.xlabel('召回率')
+    plt.ylabel('精确率')
+    plt.title('PR 曲线')
 
-# 打印分类报告
-print("\n分类报告:")
-print(classification_report(test_label_manual, all_predictions))
+    plt.tight_layout()
+    plt.show()
+
+    # 绘制混淆矩阵
+    conf_matrix = confusion_matrix(test_labels, all_predictions)
+    disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
+    plt.figure(figsize=(8, 8))
+    disp.plot(cmap='Blues', values_format='d')
+    plt.title('混淆矩阵')
+    plt.show()
+
+    return all_predictions
+
+def save_predictions(predictions, output_file='model_predictions.txt'):
+    final_predictions = [1 if label == 1 else -1 for label in predictions]
+    with open(output_file, 'w') as f:
+        for idx, label in enumerate(final_predictions, start=1):
+            f.write(f"{idx} {label}\n")
+    print(f"预测结果已保存到 '{output_file}'")
+
+def main():
+
+    # 加载和预处理数据
+    augmented_data, augmented_labels, test_data, test_label_manual = load_and_preprocess_data(
+        image_height, image_width, apply_data_augmentation)
+
+    # 创建数据集和数据加载器
+    train_dataset = FacialDataset(augmented_data, augmented_labels)
+    test_dataset = FacialDataset(test_data.clone().detach(), test_label_manual)
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
+
+    # 创建模型
+    model = CNNModel(image_height, image_width).to(device)
+
+    # 配置训练参数
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', factor=scheduler_factor, patience=scheduler_patience, verbose=True)
+
+    # 训练模型
+    train_model(model, train_loader, criterion, optimizer, scheduler, device, epochs, early_stop_patience)
+
+    # 测试模型
+    all_predictions = evaluate_model(model, test_loader, test_label_manual, device)
+
+    # 计算评价指标
+    accuracy = accuracy_score(test_label_manual, all_predictions)
+    precision = precision_score(test_label_manual, all_predictions, average='binary', pos_label=1)
+    recall = recall_score(test_label_manual, all_predictions, average='binary', pos_label=1)
+    f1 = f1_score(test_label_manual, all_predictions, average='binary', pos_label=1)
+    conf_matrix = confusion_matrix(test_label_manual, all_predictions)
+
+    print(f"测试集准确率: {accuracy:.2f}")
+    print(f"测试集精确率: {precision:.2f}")
+    print(f"测试集召回率: {recall:.2f}")
+    print(f"测试集F1得分: {f1:.2f}")
+    print("混淆矩阵:")
+    print(conf_matrix)
+    print("\n分类报告:")
+    print(classification_report(test_label_manual, all_predictions))
+
+    # 保存预测结果
+    save_predictions(all_predictions)
 
 
-# ---------------------------- 测试本地模型 ----------------------------
-# print("************************本地模型******************************")
-# # 加载训练好的模型
-# model.load_state_dict(torch.load('model.pth'))
-# model.eval()
-#
-# all_predictions = []
-# with torch.no_grad():
-#     for inputs, _ in test_loader:
-#         inputs = inputs.to(device)
-#         outputs = model(inputs)
-#         _, predicted = torch.max(outputs, 1)
-#         all_predictions.extend(predicted.cpu().numpy())
-#
-# # 计算多种评价指标
-# accuracy = accuracy_score(test_label_manual, all_predictions)
-# precision = precision_score(test_label_manual, all_predictions, average='binary', pos_label=1)
-# recall = recall_score(test_label_manual, all_predictions, average='binary', pos_label=1)
-# f1 = f1_score(test_label_manual, all_predictions, average='binary', pos_label=1)
-# conf_matrix = confusion_matrix(test_label_manual, all_predictions)
-#
-# # 打印评价指标
-# print(f"本地模型测试集准确率: {accuracy:.2f}")
-# print(f"本地模型测试集精确率: {precision:.2f}")
-# print(f"本地模型测试集召回率: {recall:.2f}")
-# print(f"本地模型测试集F1得分: {f1:.2f}")
-# print("本地模型混淆矩阵:")
-# print(conf_matrix)
-#
-# # 打印分类报告
-# print("\n本地模型分类报告:")
-# print(classification_report(test_label_manual, all_predictions))
+if __name__ == "__main__":
+    main()
