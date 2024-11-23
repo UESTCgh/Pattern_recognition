@@ -43,7 +43,6 @@ def load_and_preprocess_data(image_height, image_width, apply_data_augmentation)
 
     # 加载测试数据和标签
     test_data = sio.loadmat('../data/test_data.mat')['test_data']  # 测试数据
-    test_label_manual = sio.loadmat('../data/test_label_manual.mat')['test_label_manual'].ravel()  # 测试标签
 
     # 数据标准化处理
     scaler = StandardScaler()
@@ -56,7 +55,6 @@ def load_and_preprocess_data(image_height, image_width, apply_data_augmentation)
 
     # 标签转换：将 -1 转换为 0，符合 CrossEntropyLoss 要求
     train_label_resampled = np.where(train_label_resampled == -1, 0, train_label_resampled)
-    test_label_manual = np.where(test_label_manual == -1, 0, test_label_manual)
 
     # 划分验证集（各抽取100个正反例）
     pos_indices = np.where(train_label_resampled == 1)[0]
@@ -94,7 +92,7 @@ def load_and_preprocess_data(image_height, image_width, apply_data_augmentation)
     print(f"验证数据集数量: {val_data_tensor.shape[0]}")
     print(f"测试数据集数量: {test_data_tensor.shape[0]}")
 
-    return train_data_tensor, train_labels_final, val_data_tensor, val_labels, test_data_tensor, test_label_manual
+    return train_data_tensor, train_labels_final, val_data_tensor, val_labels, test_data_tensor
 
 def apply_data_augmentations(train_data, train_labels):
     def add_gaussian_noise(images, mean=0, std=0.1):
@@ -113,20 +111,40 @@ def apply_data_augmentations(train_data, train_labels):
     plt.figure(figsize=(12, 4))
 
     plt.subplot(1, 3, 1)
-    plt.imshow(train_data_tensor[0, 0], cmap='gray')
+    plt.imshow(train_data_tensor[338, 0], cmap='gray')
     plt.title('原始数据样本')
 
     plt.subplot(1, 3, 2)
-    plt.imshow(flipped_data[0, 0], cmap='gray')
+    plt.imshow(flipped_data[338, 0], cmap='gray')
     plt.title('水平翻转后的样本')
 
     plt.subplot(1, 3, 3)
-    plt.imshow(noisy_data[0, 0], cmap='gray')
+    plt.imshow(noisy_data[338, 0], cmap='gray')
     plt.title('添加高斯噪声后的样本')
 
     plt.tight_layout()
 
-    plt.savefig('Data.png')
+    plt.savefig('Data_noface.png')
+    plt.show()
+
+    # 可视化数据增强后的数据分布
+    plt.figure(figsize=(12, 4))
+
+    plt.subplot(1, 3, 1)
+    plt.imshow(train_data_tensor[2, 0], cmap='gray')
+    plt.title('原始数据样本')
+
+    plt.subplot(1, 3, 2)
+    plt.imshow(flipped_data[2, 0], cmap='gray')
+    plt.title('水平翻转后的样本')
+
+    plt.subplot(1, 3, 3)
+    plt.imshow(noisy_data[2, 0], cmap='gray')
+    plt.title('添加高斯噪声后的样本')
+
+    plt.tight_layout()
+
+    plt.savefig('Data_face.png')
     plt.show()
     plt.close()
 
@@ -298,57 +316,22 @@ def evaluate_model(model, test_loader, test_labels, device, threshold=0.4):
 
     return all_predictions
 
-def evaluate_model_test(model, test_loader, test_labels, device, threshold=0.4):
-    from sklearn.metrics import roc_curve, auc, precision_recall_curve, confusion_matrix, ConfusionMatrixDisplay
-    import matplotlib.pyplot as plt
+def evaluate_model_test(model, test_loader, device, threshold=0.4):
     model.load_state_dict(torch.load('final_trained_model.pth'))
     model.eval()
 
     all_predictions = []
     all_probabilities = []
     with torch.no_grad():
-        for inputs, _ in test_loader:
+        for inputs in test_loader:
+            if isinstance(inputs, tuple):
+                inputs = inputs[0]  # 如果数据是一个元组，取第一个值
             inputs = inputs.to(device)
             outputs = model(inputs)
             probabilities = torch.softmax(outputs, dim=1)[:, 1]
             all_probabilities.extend(probabilities.cpu().numpy())
             predicted = (probabilities > threshold).long()
             all_predictions.extend(predicted.cpu().numpy())
-
-    # 绘制 ROC 和 PR 曲线
-    fpr, tpr, _ = roc_curve(test_labels, all_probabilities)
-    roc_auc = auc(fpr, tpr)
-
-    plt.figure(figsize=(12, 6))
-    plt.subplot(1, 2, 1)
-    plt.plot(fpr, tpr, color='b', lw=2, label=f'ROC 曲线 (AUC = {roc_auc:.2f})')
-    plt.fill_between(fpr, tpr, alpha=0.3, color='blue')
-    plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
-    plt.xlabel('假阳性率')
-    plt.ylabel('真正率')
-    plt.title('ROC 曲线')
-    plt.legend(loc='lower right')
-
-    precision, recall, _ = precision_recall_curve(test_labels, all_probabilities)
-    plt.subplot(1, 2, 2)
-    plt.plot(recall, precision, color='b', lw=2)
-    plt.fill_between(recall, precision, alpha=0.3, color='blue')
-    plt.xlabel('召回率')
-    plt.ylabel('精确率')
-    plt.title('PR 曲线')
-
-    plt.tight_layout()
-    plt.savefig('test_ROCPR.png')
-    plt.show()
-
-    # 绘制混淆矩阵
-    conf_matrix = confusion_matrix(test_labels, all_predictions)
-    disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
-    plt.figure(figsize=(8, 8))
-    disp.plot(cmap='Blues', values_format='d')
-    plt.title('混淆矩阵')
-    plt.savefig('test_Matrix.png')
-    plt.show()
 
     return all_predictions
 
@@ -362,16 +345,16 @@ def save_predictions(predictions, output_file='model_predictions.txt'):
 
 def main():
     # 加载和预处理数据
-    train_data, train_labels, val_data, val_labels, test_data, test_label_manual = load_and_preprocess_data(image_height, image_width, apply_data_augmentation)
+    train_data, train_labels, val_data, val_labels, test_data = load_and_preprocess_data(image_height, image_width, apply_data_augmentation)
 
     # 创建数据集和数据加载器
     train_dataset = FacialDataset(train_data, train_labels)
     val_dataset = FacialDataset(val_data, val_labels)
-    test_dataset = FacialDataset(test_data, test_label_manual)
 
     train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
+
+    test_loader = DataLoader(test_data, batch_size, shuffle=False)
 
     # 创建模型
     model = CNNModel(image_height, image_width).to(device)
@@ -407,23 +390,7 @@ def main():
 
     # 测试模型
     print("测试集评估结果：")
-    test_predictions = evaluate_model_test(model, test_loader, test_label_manual, device)
-
-    # 计算测试集评价指标
-    accuracy = accuracy_score(test_label_manual, test_predictions)
-    precision = precision_score(test_label_manual, test_predictions, average='binary', pos_label=1)
-    recall = recall_score(test_label_manual, test_predictions, average='binary', pos_label=1)
-    f1 = f1_score(test_label_manual, test_predictions, average='binary', pos_label=1)
-    conf_matrix = confusion_matrix(test_label_manual, test_predictions)
-
-    print(f"测试集准确率: {accuracy:.2f}")
-    print(f"测试集精确率: {precision:.2f}")
-    print(f"测试集召回率: {recall:.2f}")
-    print(f"测试集F1得分: {f1:.2f}")
-    print("混淆矩阵:")
-    print(conf_matrix)
-    print("\n分类报告:")
-    print(classification_report(test_label_manual, test_predictions))
+    test_predictions = evaluate_model_test(model, test_loader, device)
 
     # 保存预测结果
     save_predictions(test_predictions)
