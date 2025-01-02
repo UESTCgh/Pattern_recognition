@@ -1,5 +1,6 @@
 # AI_VI 模式识别大作业
 电子科技大学模式识别课程24级大作业，有的目录没有修改 仅供参考哈哈
+
 执行list.py可以更新directory_structure.md中的目录
 
 environment.yml为项目环境文件 使用下面代码创建
